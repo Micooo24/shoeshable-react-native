@@ -1,16 +1,61 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../firebase/firebase';
+import baseURL from '../../assets/common/baseurl';
 
 const Login = ({ navigation }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    // Add login logic here
-    console.log(formData);
+  const handleSubmit = async () => {
+    setLoading(true);
+    const { email, password } = formData;
+
+    try {
+      // Firebase authentication
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUid = userCredential.user.uid;
+
+      // Send request to backend API
+      const response = await axios.post(`${baseURL}/api/auth/login`, {
+        email,
+        password,
+        firebaseUid
+      });
+
+      if (response.status === 200) {
+        setLoading(false);
+        Alert.alert('Login Successful', 'You have logged in successfully!', [
+          { text: 'OK', onPress: () => navigation.navigate('Home') }
+        ]);
+      } else {
+        setLoading(false);
+        Alert.alert('Login Failed', response.data?.message || 'An error occurred');
+      }
+    } catch (error) {
+      setLoading(false);
+
+      let errorMessage = 'Login failed. Please try again.';
+
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No user found with this email.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.response?.data) {
+        errorMessage = error.response.data.message || errorMessage;
+      }
+
+      Alert.alert('Login Error', errorMessage);
+      console.error('Login error:', error.message || error);
+    }
   };
 
   return (
@@ -60,8 +105,9 @@ const Login = ({ navigation }) => {
         <TouchableOpacity 
           style={styles.button}
           onPress={handleSubmit}
+          disabled={loading}
         >
-          <Text style={styles.buttonText}>LOGIN</Text>
+          <Text style={styles.buttonText}>{loading ? 'LOADING...' : 'LOGIN'}</Text>
         </TouchableOpacity>
       </View>
     </View>
