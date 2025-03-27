@@ -12,7 +12,7 @@ import {
   Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
+import { removeToken } from '../../utils/authentication'; 
 const { width } = Dimensions.get('window');
 
 const Shop = ({ navigation }) => {
@@ -88,6 +88,16 @@ const Shop = ({ navigation }) => {
     setProducts(filteredProducts);
   }, [selectedCategory, searchQuery]);
 
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      await removeToken(); // Clear token and user data
+      navigation.replace('Home'); 
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
   // Render each product item
   const renderProductItem = ({ item }) => (
     <TouchableOpacity
@@ -112,9 +122,14 @@ const Shop = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Shoeshable</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-          <Ionicons name="cart-outline" size={24} color="black" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={{ marginRight: 16 }}>
+            <Ionicons name="cart-outline" size={24} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar */}

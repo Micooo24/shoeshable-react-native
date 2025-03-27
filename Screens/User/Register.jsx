@@ -44,12 +44,13 @@ const Register = ({ navigation }) => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
-      base64: true,
+      base64: true, // Enable base64 encoding
     });
 
     if (!result.canceled) {
       setImage(result.assets[0].uri);
       setImageBase64(result.assets[0].base64);
+      console.log('Image successfully converted to base64'); // Simplified log
     }
   };
 
@@ -107,22 +108,25 @@ const Register = ({ navigation }) => {
     const { email, password } = formData;
     
     try {
+      // Create user in Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUid = userCredential.user.uid;
       
       const updatedFormData = { ...formData, firebaseUid };
       
+      // Prepare image data for backend
       let imageData = null;
       if (imageBase64) {
         imageData = {
-          public_id: `user_${firebaseUid}`,
-          url: `data:image/jpeg;base64,${imageBase64}`,
+          public_id: `user_${firebaseUid}`, // Unique public_id for Cloudinary
+          url: `data:image/jpeg;base64,${imageBase64}`, // Base64 string
         };
       }
       
+      // Send registration data to backend
       const response = await axios.post(`${baseURL}/api/auth/signup`, {
         ...updatedFormData,
-        profileImage: imageData || { public_id: 'default_public_id', url: '' },
+        profileImage: imageData || { public_id: 'default_public_id', url: '' }, // Default image if none selected
       });
   
       if (response.status === 201) {
@@ -178,6 +182,7 @@ const Register = ({ navigation }) => {
         </View>
 
         <View style={styles.formContainer}>
+          {/* Form Fields */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Username</Text>
             <TextInput
@@ -188,6 +193,7 @@ const Register = ({ navigation }) => {
             />
             {renderErrorMessage('username')}
           </View>
+
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
@@ -268,6 +274,8 @@ const Register = ({ navigation }) => {
             />
           </View>
 
+
+          {/* Image Picker */}
           <TouchableOpacity 
             style={styles.imagePicker}
             onPress={handleImagePick}
@@ -276,6 +284,7 @@ const Register = ({ navigation }) => {
           </TouchableOpacity>
           {image && <Image source={{ uri: image }} style={styles.image} />}
 
+          {/* Submit Button */}
           <TouchableOpacity 
             style={styles.button}
             onPress={handleSubmit}
@@ -288,6 +297,7 @@ const Register = ({ navigation }) => {
             )}
           </TouchableOpacity>
 
+          {/* Login Link */}
           <TouchableOpacity 
             style={styles.loginLink}
             onPress={() => navigation.navigate('Login')}

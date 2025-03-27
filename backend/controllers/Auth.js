@@ -9,7 +9,18 @@ exports.Register = async function (req, res) {
     session.startTransaction();
 
     try {
-        const { username, email, password, firstName, lastName, phoneNumber, address, zipCode, firebaseUid } = req.body;
+        const { 
+            username, 
+            email, 
+            password, 
+            firstName, 
+            lastName, 
+            phoneNumber, 
+            address, 
+            zipCode, 
+            firebaseUid, 
+            profileImage 
+        } = req.body;
 
         // Check if the email is already registered
         const existingUser = await User.findOne({ email });
@@ -20,23 +31,27 @@ exports.Register = async function (req, res) {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Upload the profile image to Cloudinary (if any)
-        let profileImage = {};
-        if (req.file) {
-            const result = await cloudinary.uploader.upload(req.file.path, {
-                folder: 'register/users',
-                width: 150,
-                crop: "scale"
-            });
+        let uploadedImage = {
+            public_id: 'default_public_id',
+            url: 'default_url',
+        };
 
-            profileImage = {
-                public_id: result.public_id,
-                url: result.secure_url
-            };
-        } else {
-            profileImage = {
-                public_id: 'default_public_id',
-                url: 'default_url'
-            };
+        if (profileImage && profileImage.url) {
+            try {
+                const result = await cloudinary.uploader.upload(profileImage.url, {
+                    folder: 'register/users',
+                    public_id: profileImage.public_id, // Use the provided public_id
+                    overwrite: true,
+                });
+
+                uploadedImage = {
+                    public_id: result.public_id,
+                    url: result.secure_url,
+                };
+            } catch (error) {
+                console.error('Error uploading image to Cloudinary:', error);
+                return res.status(500).json({ message: 'Image upload failed', error: error.message });
+            }
         }
 
         // Create a new User instance
@@ -49,7 +64,7 @@ exports.Register = async function (req, res) {
             phoneNumber,
             address,
             zipCode,
-            profileImage,
+            profileImage: uploadedImage, // Use the uploaded image
             firebaseUid,
             role: "user", // Set role as user
             status: "active", // Set default status as active
