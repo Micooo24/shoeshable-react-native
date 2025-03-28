@@ -13,51 +13,57 @@ const Login = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Configure Google Sign-In with both web and Android client IDs
+    // Configure Google Sign-In
     GoogleSignin.configure({
-      webClientId: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com', // Your web client ID
-      // androidClientId: '80143970667-piioo0cvhqtf34mpb8mk7eap1k06l9ih.apps.googleusercontent.com', // Replace with your Android client ID
+      webClientId: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com',
       offlineAccess: true,
       forceCodeForRefreshToken: true,
     });
-    console.log('Google Sign-In configured');
   }, []);
 
   const handleGoogleLogin = async () => {
     try {
-      console.log('Starting Google Sign-In process...');
       setLoading(true);
+      console.log('Starting Google Sign-In process...');
 
-      // Check if Google Play Services are available
+      // 1. Check for Play Services
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      console.log('Google Play Services are available.');
 
-      // Get the user's ID token
-      const { idToken } = await GoogleSignin.signIn()
-        .then(userInfo => GoogleSignin.getTokens())
-        .catch(error => {
-          console.log('Google Sign-In error:', error);
-          throw error;
-        });
-
-      console.log('Google Sign-In successful. ID Token:', idToken);
-
-      if (!idToken) {
-        throw new Error('No ID token found. Please try again.');
+      // 2. Sign out first to ensure account selection
+      try {
+        await GoogleSignin.signOut();
+        console.log('User signed out from Google');
+      } catch (signOutError) {
+        console.log('Google sign out error:', signOutError);
       }
 
-      // Create a Google credential with the token
-      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-      console.log('Google Credential created');
+      // 3. Configure to force account selection
+      await GoogleSignin.configure({
+        webClientId: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com',
+        offlineAccess: true,
+        accountName: '', // Empty string forces account selection
+      });
 
-      // Sign-in the user with the credential
-      const userCredential = await auth().signInWithCredential(googleCredential);
-      console.log('Firebase Sign-In successful:', userCredential.user);
+      // 4. Perform sign-in with account selection
+      const userInfo = await GoogleSignin.signIn({
+        prompt: 'select_account', // Forces account selection
+      });
 
-      // Save user data
+      // 5. Get ID token
+      const { idToken } = await GoogleSignin.getTokens();
+      console.log('ID token:', idToken);
+
+      if (!idToken) {
+        throw new Error('No ID token found');
+      }
+
+      // 6. Firebase authentication
+      const credential = auth.GoogleAuthProvider.credential(idToken);
+      const userCredential = await auth().signInWithCredential(credential);
       const user = userCredential.user;
-      const token = await user.getIdToken();
       
+      // 7. Save user data
+      const token = await user.getIdToken();
       await saveToken(token);
       await saveUserData({
         uid: user.uid,
@@ -68,24 +74,72 @@ const Login = ({ navigation }) => {
 
       setLoading(false);
       navigation.navigate('Shop');
+
+    } catch (error) {
+      setLoading(false);
+      console.error('Google Sign-In Error:', error);
+      
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('User cancelled the sign-in flow');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        console.log('Sign-in already in progress');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services not available');
+      } else {
+        Alert.alert('Error', error.message || 'Sign-in failed');
+      }
+    }
+  };
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      // Sign in with email and password
+      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      
+      // User successfully logged in
+      const user = userCredential.user;
+      console.log('User logged in:', user.email);
+      
+      setLoading(false);
+      navigation.navigate('Home'); // Navigate to your main screen
       
     } catch (error) {
       setLoading(false);
-      console.error('Google Login Error:', error);
-
-      let errorMessage = 'Google login failed. Please try again.';
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        errorMessage = 'Google sign-in was cancelled.';
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        errorMessage = 'Google sign-in is already in progress.';
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        errorMessage = 'Google Play Services are not available.';
+      console.error('Login error:', error);
+      
+      let errorMessage = 'Login failed. Please try again.';
+      switch (error.code) {
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This account has been disabled';
+          break;
+        case 'auth/user-not-found':
+          errorMessage = 'No account found with this email';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many attempts. Try again later';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Check your connection';
+          break;
       }
-
-      Alert.alert('Google Login Error', errorMessage);
+      
+      Alert.alert('Login Error', errorMessage);
     }
   };
 
+  
   const handleSubmit = async () => {
     setLoading(true);
     const { email, password } = formData;
@@ -136,6 +190,7 @@ const Login = ({ navigation }) => {
       </View>
 
       <View style={styles.formContainer}>
+        {/* Email and Password Inputs remain the same */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -190,6 +245,7 @@ const Login = ({ navigation }) => {
   );
 };
 
+// Your existing styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,
