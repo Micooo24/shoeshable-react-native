@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import axios from 'axios';
-import { auth } from '../../firebase/firebase'; // Import updated auth from firebase.js
-import { signInWithEmailAndPassword } from '@react-native-firebase/auth';
-import baseURL from '../../assets/common/baseurl';
-import { saveToken, saveUserData } from '../../utils/authentication'; // Import utility functions
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import auth from '@react-native-firebase/auth';
+import { saveToken, saveUserData } from '../../utils/authentication';
 
 const Login = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -14,62 +12,109 @@ const Login = ({ navigation }) => {
   });
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    // Configure Google Sign-In with both web and Android client IDs
+    GoogleSignin.configure({
+      webClientId: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com', // Your web client ID
+      // androidClientId: '80143970667-piioo0cvhqtf34mpb8mk7eap1k06l9ih.apps.googleusercontent.com', // Replace with your Android client ID
+      offlineAccess: true,
+      forceCodeForRefreshToken: true,
+    });
+    console.log('Google Sign-In configured');
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    try {
+      console.log('Starting Google Sign-In process...');
+      setLoading(true);
+
+      // Check if Google Play Services are available
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      console.log('Google Play Services are available.');
+
+      // Get the user's ID token
+      const { idToken } = await GoogleSignin.signIn()
+        .then(userInfo => GoogleSignin.getTokens())
+        .catch(error => {
+          console.log('Google Sign-In error:', error);
+          throw error;
+        });
+
+      console.log('Google Sign-In successful. ID Token:', idToken);
+
+      if (!idToken) {
+        throw new Error('No ID token found. Please try again.');
+      }
+
+      // Create a Google credential with the token
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+      console.log('Google Credential created');
+
+      // Sign-in the user with the credential
+      const userCredential = await auth().signInWithCredential(googleCredential);
+      console.log('Firebase Sign-In successful:', userCredential.user);
+
+      // Save user data
+      const user = userCredential.user;
+      const token = await user.getIdToken();
+      
+      await saveToken(token);
+      await saveUserData({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+      });
+
+      setLoading(false);
+      navigation.navigate('Shop');
+      
+    } catch (error) {
+      setLoading(false);
+      console.error('Google Login Error:', error);
+
+      let errorMessage = 'Google login failed. Please try again.';
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        errorMessage = 'Google sign-in was cancelled.';
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        errorMessage = 'Google sign-in is already in progress.';
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        errorMessage = 'Google Play Services are not available.';
+      }
+
+      Alert.alert('Google Login Error', errorMessage);
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     const { email, password } = formData;
 
     try {
-      // Firebase authentication
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUid = userCredential.user.uid;
+      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+      const token = await user.getIdToken();
 
-      // Send request to backend API
-      const response = await axios.post(`${baseURL}/api/auth/login`, {
-        email,
-        password,
-        firebaseUid
+      await saveToken(token);
+      await saveUserData({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
       });
 
-      if (response.status === 200 || response.status === 201) {
-        const { token, user } = response.data;
-
-        // Save the token and user data using utility functions
-        await saveToken(token);
-        await saveUserData(user);
-
-        setLoading(false);
-        Alert.alert('Login Successful', 'You have logged in successfully!', [
-          { text: 'OK', onPress: () => navigation.navigate('Shop') }
-        ]);
-      } else {
-        setLoading(false);
-        Alert.alert('Login Failed', response.data?.message || 'An error occurred');
-      }
+      setLoading(false);
+      navigation.navigate('Shop');
     } catch (error) {
       setLoading(false);
+      console.error('Firebase Login Error:', error);
 
       let errorMessage = 'Login failed. Please try again.';
-
-      // Firebase authentication errors
-      if (error.code) {
-        if (error.code === 'auth/user-not-found') {
-          errorMessage = 'No user found with this email.';
-        } else if (error.code === 'auth/wrong-password') {
-          errorMessage = 'Incorrect password.';
-        } else if (error.code === 'auth/invalid-email') {
-          errorMessage = 'Invalid email address.';
-        } else if (error.code === 'auth/too-many-requests') {
-          errorMessage = 'Too many failed login attempts. Please try again later.';
-        } else if (error.code === 'auth/network-request-failed') {
-          errorMessage = 'Network error. Please check your connection.';
-        }
-      }
-
-      // Backend API errors
-      if (error.response) {
-        errorMessage = error.response.data.message || errorMessage;
-      } else if (error.request) {
-        errorMessage = 'Server did not respond. Please try again.';
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No user found with this email.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
       }
 
       Alert.alert('Login Error', errorMessage);
@@ -125,7 +170,20 @@ const Login = ({ navigation }) => {
           onPress={handleSubmit}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>{loading ? 'LOADING...' : 'LOGIN'}</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>LOGIN</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.googleButton}
+          onPress={handleGoogleLogin}
+          disabled={loading}
+        >
+          <Icon name="google" size={24} color="#FFFFFF" />
+          <Text style={styles.googleButtonText}>Sign in with Google</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -200,12 +258,27 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 8,
     alignItems: 'center',
+    marginBottom: 20,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 1,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DB4437',
+    padding: 15,
+    borderRadius: 8,
+  },
+  googleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
   },
 });
 
