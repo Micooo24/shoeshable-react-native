@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -14,8 +14,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import baseURL from '../../assets/common/baseurl';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebase/firebase';
+import { auth } from '../../firebase/firebase'; // Import updated auth from firebase.js
+import { createUserWithEmailAndPassword } from '@react-native-firebase/auth';
 
 const Register = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -27,16 +27,11 @@ const Register = ({ navigation }) => {
     phoneNumber: '',
     address: '',
     zipCode: '',
-    firebaseUid: ''
   });
   const [image, setImage] = useState(null);
   const [imageBase64, setImageBase64] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    console.log('Firebase Auth:', auth);
-  }, []);
 
   const handleImagePick = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -44,13 +39,12 @@ const Register = ({ navigation }) => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
-      base64: true, // Enable base64 encoding
+      base64: true, // Enable Base64 encoding
     });
 
     if (!result.canceled) {
       setImage(result.assets[0].uri);
-      setImageBase64(result.assets[0].base64);
-      console.log('Image successfully converted to base64'); // Simplified log
+      setImageBase64(result.assets[0].base64); // Store Base64 string
     }
   };
 
@@ -111,24 +105,25 @@ const Register = ({ navigation }) => {
       // Create user in Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUid = userCredential.user.uid;
-      
-      const updatedFormData = { ...formData, firebaseUid };
-      
+
       // Prepare image data for backend
-      let imageData = null;
-      if (imageBase64) {
-        imageData = {
-          public_id: `user_${firebaseUid}`, // Unique public_id for Cloudinary
-          url: `data:image/jpeg;base64,${imageBase64}`, // Base64 string
-        };
-      }
-      
+      const profileImage = imageBase64
+        ? {
+            public_id: `user_${firebaseUid}`, // Unique public_id for the image
+            url: `data:image/jpeg;base64,${imageBase64}`, // Base64 string
+          }
+        : { public_id: 'default_public_id', url: 'default_url' }; // Default image if none selected
+
+      // Prepare data for backend
+      const updatedFormData = {
+        ...formData,
+        firebaseUid,
+        profileImage,
+      };
+
       // Send registration data to backend
-      const response = await axios.post(`${baseURL}/api/auth/signup`, {
-        ...updatedFormData,
-        profileImage: imageData || { public_id: 'default_public_id', url: '' }, // Default image if none selected
-      });
-  
+      const response = await axios.post(`${baseURL}/api/auth/signup`, updatedFormData);
+
       if (response.status === 201) {
         setLoading(false);
         Alert.alert(
@@ -194,7 +189,6 @@ const Register = ({ navigation }) => {
             {renderErrorMessage('username')}
           </View>
 
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -218,7 +212,6 @@ const Register = ({ navigation }) => {
             />
             {renderErrorMessage('password')}
           </View>
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>First Name</Text>
             <TextInput
@@ -273,7 +266,6 @@ const Register = ({ navigation }) => {
               value={formData.zipCode}
             />
           </View>
-
 
           {/* Image Picker */}
           <TouchableOpacity 

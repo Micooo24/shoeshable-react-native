@@ -135,3 +135,63 @@ exports.Login = async function (req, res) {
         res.status(500).json({ message: "Server error" });
     }
 };
+
+exports.googleLogin = async function (req, res) {
+    const session = await mongoose.startSession(); // Start a session for transaction
+    session.startTransaction();
+
+    try {
+        const { email, firebaseUid } = req.body;
+        console.log("Received Google login request:", { email, firebaseUid });
+
+        // Check if the user already exists
+        let user = await User.findOne({ email });
+        if (!user) {
+            console.log("User not found, creating a new user");
+
+            // Create a new User instance if not exists
+            user = new User({
+                email,
+                firebaseUid,
+                role: "user", // Set role as user
+                status: "active", // Google users are considered active
+                firstName: 'FirstName',
+                lastName: 'LastName',
+                phoneNumber: '09283447155',
+                address: 'Default Address',
+                zipCode: '1700',
+                profileImage: {
+                    public_id: 'register/users/kbr9b1dcvxicc618sejk',
+                    url: 'https://res.cloudinary.com/dutui5dbt/image/upload/v1732375637/register/users/kbr9b1dcvxicc618sejk.png'
+                }
+            });
+
+            // Save the user in the database with the transaction session
+            await user.save({ session });
+            console.log("New user created and saved:", user);
+        } else {
+            console.log("User found:", user);
+        }
+
+        // Generate JWT token
+        const token = user.getJwtToken();
+        console.log("Generated JWT token:", token);
+
+        // Commit the transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        // Return the token and user information
+        return res.status(200).json({
+            success: true,
+            token,
+            userId: user._id 
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error("Error during Google login:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};

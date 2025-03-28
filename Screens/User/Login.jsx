@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebase/firebase';
+import { auth } from '../../firebase/firebase'; // Import updated auth from firebase.js
+import { signInWithEmailAndPassword } from '@react-native-firebase/auth';
 import baseURL from '../../assets/common/baseurl';
 import { saveToken, saveUserData } from '../../utils/authentication'; // Import utility functions
 
@@ -17,26 +17,20 @@ const Login = ({ navigation }) => {
   const handleSubmit = async () => {
     setLoading(true);
     const { email, password } = formData;
-    console.log('Login attempt:', { email });
 
     try {
       // Firebase authentication
-      console.log('Attempting Firebase authentication...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUid = userCredential.user.uid;
-      console.log('Firebase authentication successful. UID:', firebaseUid);
 
       // Send request to backend API
-      console.log('Sending authentication request to backend API...');
       const response = await axios.post(`${baseURL}/api/auth/login`, {
         email,
         password,
         firebaseUid
       });
-      console.log('Backend response status:', response.status);
 
       if (response.status === 200 || response.status === 201) {
-        console.log('Login successful, saving token and user data...');
         const { token, user } = response.data;
 
         // Save the token and user data using utility functions
@@ -48,7 +42,6 @@ const Login = ({ navigation }) => {
           { text: 'OK', onPress: () => navigation.navigate('Shop') }
         ]);
       } else {
-        console.log('Login failed with status:', response.status, 'Response:', response.data);
         setLoading(false);
         Alert.alert('Login Failed', response.data?.message || 'An error occurred');
       }
@@ -56,46 +49,30 @@ const Login = ({ navigation }) => {
       setLoading(false);
 
       let errorMessage = 'Login failed. Please try again.';
-      console.log('Login error details:', error);
 
       // Firebase authentication errors
       if (error.code) {
-        console.error('Firebase auth error code:', error.code);
-
         if (error.code === 'auth/user-not-found') {
           errorMessage = 'No user found with this email.';
-          console.error('User not found in Firebase');
         } else if (error.code === 'auth/wrong-password') {
           errorMessage = 'Incorrect password.';
-          console.error('Wrong password provided to Firebase');
         } else if (error.code === 'auth/invalid-email') {
           errorMessage = 'Invalid email address.';
-          console.error('Invalid email format');
         } else if (error.code === 'auth/too-many-requests') {
           errorMessage = 'Too many failed login attempts. Please try again later.';
-          console.error('Firebase rate limiting due to too many attempts');
         } else if (error.code === 'auth/network-request-failed') {
           errorMessage = 'Network error. Please check your connection.';
-          console.error('Firebase network request failed');
         }
       }
 
       // Backend API errors
       if (error.response) {
-        console.error('Backend API error response:', {
-          status: error.response.status,
-          data: error.response.data,
-          headers: error.response.headers
-        });
         errorMessage = error.response.data.message || errorMessage;
       } else if (error.request) {
-        // Request was made but no response was received
-        console.error('No response received from API:', error.request);
         errorMessage = 'Server did not respond. Please try again.';
       }
 
       Alert.alert('Login Error', errorMessage);
-      console.error('Login failed with message:', errorMessage);
     }
   };
 
