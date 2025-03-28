@@ -1,0 +1,92 @@
+{
+  "project_info": {
+    "project_number": "80143970667",
+    "project_id": "shoeshable-e8142",
+    "storage_bucket": "shoeshable-e8142.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:80143970667:android:1ead76556cf20bc4ce9c2e",
+        "android_client_info": {
+          "package_name": "com.anonymous.shoeshableandroid"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "80143970667-9tbcobpsknt7004rqn3olgiig07veeu8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anonymous.shoeshableandroid",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "80143970667-piioo0cvhqtf34mpb8mk7eap1k06l9ih.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anonymous.shoeshableandroid",
+            "certificate_hash": "cf0c19970207b15da5cd8638683281a3591906b4"
+          }
+        },
+        {
+          "client_id": "80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_zMqRkXAiHYBnc1aIGDi6AfTrwCL3SVg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:80143970667:android:3d97d513feb8c5fdce9c2e",
+        "android_client_info": {
+          "package_name": "com.shoeshable"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "80143970667-rjoatksbqghusg2vvs20a0o4mg8029md.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shoeshable",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_zMqRkXAiHYBnc1aIGDi6AfTrwCL3SVg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
