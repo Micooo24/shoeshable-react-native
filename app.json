@@ -31,11 +31,6 @@
       "@react-native-google-signin/google-signin",
       "@react-native-firebase/app",
       "@react-native-firebase/auth"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "264eac25-8bd8-4cf0-855d-494994648b0b"
-      }
-    }
+    ]
   }
 }
