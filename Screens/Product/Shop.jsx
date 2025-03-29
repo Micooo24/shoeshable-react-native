@@ -92,7 +92,7 @@ const Shop = ({ navigation }) => {
   const handleLogout = async () => {
     try {
       await removeToken(); // Clear token and user data
-      navigation.replace('Home'); 
+      navigation.navigate('Home');
     } catch (error) {
       console.error('Error during logout:', error);
     }
