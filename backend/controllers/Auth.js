@@ -8,6 +8,9 @@ const { OAuth2Client } = require('google-auth-library'); // Import Google Auth L
 const client = new OAuth2Client('80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com'); // Replace with your webClientId
 
 
+
+
+//Register a new user
 exports.Register = async function (req, res) {
     const session = await mongoose.startSession(); // Start a session for transaction
     session.startTransaction();
@@ -93,7 +96,9 @@ exports.Register = async function (req, res) {
     }
 };
 
-// Checks if Verified user before sending token
+
+//Login with email and  password comparison to the backend
+
 exports.Login = async function (req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -140,6 +145,8 @@ exports.Login = async function (req, res) {
     }
 };
 
+
+//Google Login with Firebase UID and created credentials through database 
 exports.googleLogin = async function (req, res) {
     try {
         const { idToken, firebaseUid } = req.body; // Receive firebaseUid from the frontend
@@ -212,3 +219,99 @@ exports.googleLogin = async function (req, res) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
+
+//Get User Profile via middleware
+exports.getUserProfile = async function (req, res, next) {
+    try {
+        // Fetch user by ID
+        const user = await User.findById(req.user.id);
+
+        // Check if both user and customer exist
+        if (!user ) {
+            return res.status(404).json({
+                success: false,
+                message: "User or customer details not found"
+            });
+        }
+        // Return user and customer details in the response
+        return res.status(200).json({
+            success: true,
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                phoneNumber: user.phoneNumber,
+                address: user.address,
+                zipCode: user.zipCode,
+                profileImage: user.profileImage
+
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error fetching user profile" });
+    }
+}
+
+//Update User Profile via middleware 
+exports.updateProfile = async function (req, res, next) {
+    try {
+        const { username, email, firstName, lastName, phoneNumber, address, zipCode } = req.body;
+
+        // Initialize a new user data object
+        const newUserData = {
+            username,
+            email,
+            firstName,
+            lastName,
+            phoneNumber,
+            address,
+            zipCode
+        };
+
+        // Start transaction session to update both User and Customer
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        // Update the user details
+        const updatedUser = await User.findByIdAndUpdate(req.user.id, newUserData, {
+            new: true,
+            runValidators: true,
+            session
+        });
+
+
+        // Update profile image for customer if provided
+        if (req.file) {
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: 'users',
+                width: 150,
+                crop: "scale"
+            });
+            newUserData.profileImage = {
+                public_id: result.public_id,
+                url: result.secure_url
+            };
+        }
+
+
+        // Commit the transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        // Respond with updated user and customer details
+        return res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error updating profile", error: error.message });
+    }
+}
+
+
