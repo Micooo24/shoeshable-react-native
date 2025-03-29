@@ -1,12 +1,11 @@
-//File upload middleware
 const multer = require("multer");
 const path = require("path");
 
 module.exports = multer({
-    limits: { fieldSize: 50 * 1024 * 1024 },
-    storage: multer.diskStorage({}),
+    limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5MB
+    storage: multer.memoryStorage(), // Store files in memory
     fileFilter: (req, file, cb) => {
-        console.log(req.files)
+        console.log("Uploaded file:", file); // Debugging log
         let ext = path.extname(file.originalname).toLowerCase();
         if (ext !== ".jpg" && ext !== ".jpeg" && ext !== ".png") {
             cb(new Error("Unsupported file type!"), false);

@@ -46,7 +46,7 @@ exports.Register = async function (req, res) {
         if (profileImage && profileImage.url) {
             try {
                 const result = await cloudinary.uploader.upload(profileImage.url, {
-                    folder: 'register/users',
+                    folder: 'users',
                     public_id: profileImage.public_id, // Use the provided public_id
                     overwrite: true,
                 });
@@ -98,7 +98,6 @@ exports.Register = async function (req, res) {
 
 
 //Login with email and  password comparison to the backend
-
 exports.Login = async function (req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -255,63 +254,80 @@ exports.getUserProfile = async function (req, res, next) {
     }
 }
 
-//Update User Profile via middleware 
+//Update User Profile via middleware
 exports.updateProfile = async function (req, res, next) {
     try {
-        const { username, email, firstName, lastName, phoneNumber, address, zipCode } = req.body;
+        const { firstName, lastName, phoneNumber, address, zipCode } = req.body;
 
         // Initialize a new user data object
         const newUserData = {
-            username,
-            email,
             firstName,
             lastName,
             phoneNumber,
             address,
-            zipCode
+            zipCode,
         };
 
-        // Start transaction session to update both User and Customer
+        // Start transaction session
         const session = await mongoose.startSession();
         session.startTransaction();
 
-        // Update the user details
-        const updatedUser = await User.findByIdAndUpdate(req.user.id, newUserData, {
-            new: true,
-            runValidators: true,
-            session
-        });
+        try {
+            // Update profile image if provided
+            if (req.file) {
+                console.log("Uploaded file buffer:", req.file.buffer); // Debugging log
+                const result = await new Promise((resolve, reject) => {
+                    const stream = cloudinary.uploader.upload_stream(
+                        { folder: 'users', width: 150, crop: "scale" },
+                        (error, result) => {
+                            if (error) {
+                                reject(new Error("Cloudinary upload failed"));
+                            } else {
+                                resolve(result);
+                            }
+                        }
+                    );
+                    stream.end(req.file.buffer);
+                });
 
+                console.log("Cloudinary upload result:", result); // Debugging log
+                newUserData.profileImage = {
+                    public_id: result.public_id,
+                    url: result.secure_url,
+                };
+            } else {
+                console.log("No file uploaded, skipping profile image update");
+            }
 
-        // Update profile image for customer if provided
-        if (req.file) {
-            const result = await cloudinary.uploader.upload(req.file.path, {
-                folder: 'users',
-                width: 150,
-                crop: "scale"
+            // Update the user details
+            const updatedUser = await User.findByIdAndUpdate(req.user.id, newUserData, {
+                new: true,
+                runValidators: true,
+                session,
             });
-            newUserData.profileImage = {
-                public_id: result.public_id,
-                url: result.secure_url
-            };
+
+            if (!updatedUser) {
+                throw new Error("User not found");
+            }
+
+            // Commit the transaction
+            await session.commitTransaction();
+            session.endSession();
+
+            // Respond with updated user details
+            return res.status(200).json({
+                success: true,
+                message: "Profile updated successfully",
+                user: updatedUser,
+            });
+        } catch (error) {
+            // Abort the transaction in case of an error
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
         }
-
-
-        // Commit the transaction
-        await session.commitTransaction();
-        session.endSession();
-
-        // Respond with updated user and customer details
-        return res.status(200).json({
-            success: true,
-            message: "Profile updated successfully",
-            user: updatedUser
-        });
-
     } catch (error) {
-        console.error(error);
+        console.error("Error updating profile:", error);
         res.status(500).json({ message: "Error updating profile", error: error.message });
     }
-}
-
-
+};
