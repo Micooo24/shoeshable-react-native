@@ -125,6 +125,8 @@ exports.Login = async function (req, res) {
         // Generate JWT token
         const token = user.getJwtToken();
 
+        console.log(token)
+
         // Commit the transaction
         await session.commitTransaction();
         session.endSession();

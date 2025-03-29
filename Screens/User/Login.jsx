@@ -23,6 +23,7 @@ const Login = ({ navigation }) => {
       forceCodeForRefreshToken: true,
     });
   }, []);
+
   const handleGoogleLogin = async () => {
     try {
         setLoading(true);
@@ -95,91 +96,95 @@ const Login = ({ navigation }) => {
     }
 };
 
-  const handleLogin = async () => {
-    if (!email || !password) {
+const handleLogin = async () => {
+  if (!formData.email || !formData.password) {
       Alert.alert('Error', 'Please enter both email and password');
       return;
-    }
+  }
 
-    setLoading(true);
-    
-    try {
-      // Sign in with email and password
-      const userCredential = await auth().signInWithEmailAndPassword(email, password);
-      
-      // User successfully logged in
-      const user = userCredential.user;
-      console.log('User logged in:', user.email);
-      
+  setLoading(true);
+
+  try {
+      // Make a POST request to the backend login endpoint
+      const response = await axios.post(`${baseURL}/api/auth/login`, {
+          email: formData.email,
+          password: formData.password,
+      });
+
+      // Extract the token and user data from the response
+      const { token, user } = response.data;
+
+      // Save the token and user data locally
+      await saveToken(token);
+      await saveUserData({
+          uid: user._id,
+          email: user.email,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          address: user.address,
+          zipCode: user.zipCode,
+          profileImage: user.profileImage,
+      });
+
       setLoading(false);
       navigation.navigate('Home'); // Navigate to your main screen
-      
-    } catch (error) {
+  } catch (error) {
       setLoading(false);
-      console.error('Login error:', error);
-      
-      let errorMessage = 'Login failed. Please try again.';
-      switch (error.code) {
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email address';
-          break;
-        case 'auth/user-disabled':
-          errorMessage = 'This account has been disabled';
-          break;
-        case 'auth/user-not-found':
-          errorMessage = 'No account found with this email';
-          break;
-        case 'auth/wrong-password':
-          errorMessage = 'Incorrect password';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Too many attempts. Try again later';
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = 'Network error. Check your connection';
-          break;
-      }
-      
-      Alert.alert('Login Error', errorMessage);
-    }
-  };
+      console.error('Login Error:', error);
 
+      let errorMessage = 'Login failed. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+      }
+
+      Alert.alert('Login Error', errorMessage);
+  }
+};
   
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     setLoading(true);
     const { email, password } = formData;
 
     try {
-      const userCredential = await auth().signInWithEmailAndPassword(email, password);
-      const user = userCredential.user;
-      const token = await user.getIdToken();
+        // Make a POST request to the backend login endpoint
+        const response = await axios.post(`${baseURL}/api/auth/login`, {
+            email,
+            password,
+        });
 
-      await saveToken(token);
-      await saveUserData({
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-      });
+        // Extract the token and user data from the response
+        const { token, user } = response.data;
 
-      setLoading(false);
-      navigation.navigate('Shop');
+        // Save the token and user data locally
+        await saveToken(token);
+        await saveUserData({
+            uid: user._id,
+            email: user.email,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phoneNumber: user.phoneNumber,
+            address: user.address,
+            zipCode: user.zipCode,
+            profileImage: user.profileImage,
+        });
+
+        setLoading(false);
+        navigation.navigate('Shop'); // Navigate to the next screen
     } catch (error) {
-      setLoading(false);
-      console.error('Firebase Login Error:', error);
+        setLoading(false);
+        console.error('Login Error:', error);
 
-      let errorMessage = 'Login failed. Please try again.';
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No user found with this email.';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
-      }
+        let errorMessage = 'Login failed. Please try again.';
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        }
 
-      Alert.alert('Login Error', errorMessage);
+        Alert.alert('Login Error', errorMessage);
     }
-  };
-
+};
   return (
     <View style={styles.container}>
       <TouchableOpacity 
