@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import { saveToken, saveUserData } from '../../utils/authentication';
+import baseURL from '../../assets/common/baseurl';
+import axios from 'axios';
 
 const Login = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -20,76 +23,78 @@ const Login = ({ navigation }) => {
       forceCodeForRefreshToken: true,
     });
   }, []);
-
   const handleGoogleLogin = async () => {
     try {
-      setLoading(true);
-      console.log('Starting Google Sign-In process...');
+        setLoading(true);
+        console.log('Starting Google Sign-In process...');
 
-      // 1. Check for Play Services
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        // 1. Check for Play Services
+        await GoogleSignin.hasPlayServices({
+            showPlayServicesUpdateDialog: true,
+        });
 
-      // 2. Sign out first to ensure account selection
-      try {
-        await GoogleSignin.signOut();
-        console.log('User signed out from Google');
-      } catch (signOutError) {
-        console.log('Google sign out error:', signOutError);
-      }
+        // 2. Perform Google Sign-In
+        const signInResult = await GoogleSignin.signIn();
+        console.log('Google Sign-In result:', signInResult);
 
-      // 3. Configure to force account selection
-      await GoogleSignin.configure({
-        webClientId: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com',
-        offlineAccess: true,
-        accountName: '', // Empty string forces account selection
-      });
+        // 3. Get tokens
+        const { idToken } = await GoogleSignin.getTokens();
+        if (!idToken) {
+            throw new Error('No ID token found');
+        }
 
-      // 4. Perform sign-in with account selection
-      const userInfo = await GoogleSignin.signIn({
-        prompt: 'select_account', // Forces account selection
-      });
+        // 4. Authenticate with Firebase to get the firebaseUid
+        const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+        const firebaseUser = await auth().signInWithCredential(googleCredential);
+        const firebaseUid = firebaseUser.user.uid; // Get the Firebase UID
+        console.log('Firebase UID:', firebaseUid);
 
-      // 5. Get ID token
-      const { idToken } = await GoogleSignin.getTokens();
-      console.log('ID token:', idToken);
+        // 5. Send ID token and firebaseUid to the backend
+        const response = await axios.post(`${baseURL}/api/auth/google-login`, {
+            idToken, // Send the ID token to the backend
+            firebaseUid, // Pass the Firebase UID to the backend
+        });
 
-      if (!idToken) {
-        throw new Error('No ID token found');
-      }
+        // 6. Handle backend response
+        const { token, userId, email, username, firstName, lastName, phoneNumber, address, zipCode, profileImage } = response.data;
+        console.log('Backend response:', response.data);
 
-      // 6. Firebase authentication
-      const credential = auth.GoogleAuthProvider.credential(idToken);
-      const userCredential = await auth().signInWithCredential(credential);
-      const user = userCredential.user;
-      
-      // 7. Save user data
-      const token = await user.getIdToken();
-      await saveToken(token);
-      await saveUserData({
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-      });
+        // Save the token and user data locally
+        await saveToken(token);
+        await saveUserData({
+            userId,
+            email,
+            username,
+            firstName,
+            lastName,
+            phoneNumber,
+            address,
+            zipCode,
+            profileImage,
+            firebaseUid, // Save the Firebase UID locally
+        });
 
-      setLoading(false);
-      navigation.navigate('Shop');
-
+        setLoading(false);
+        navigation.navigate('Shop'); // Navigate to the next screen
     } catch (error) {
-      setLoading(false);
-      console.error('Google Sign-In Error:', error);
-      
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('User cancelled the sign-in flow');
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        console.log('Sign-in already in progress');
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Error', 'Google Play Services not available');
-      } else {
-        Alert.alert('Error', error.message || 'Sign-in failed');
-      }
+        setLoading(false);
+        console.error('Google Sign-In Error:', error);
+
+        let errorMessage = 'Sign-in failed';
+        if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+            errorMessage = 'Sign-in cancelled';
+        } else if (error.code === statusCodes.IN_PROGRESS) {
+            errorMessage = 'Sign-in already in progress';
+        } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+            errorMessage = 'Google Play Services not available';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        Alert.alert('Error', errorMessage);
     }
-  };
+};
+
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password');

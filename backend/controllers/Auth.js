@@ -3,6 +3,10 @@ const User = require("../models/User");
 const cloudinary = require('cloudinary').v2;
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+// const admin = require("../firebase_backend/firebaseAdmin"); // Import Firebase Admin
+const { OAuth2Client } = require('google-auth-library'); // Import Google Auth Library
+const client = new OAuth2Client('80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com'); // Replace with your webClientId
+
 
 exports.Register = async function (req, res) {
     const session = await mongoose.startSession(); // Start a session for transaction
@@ -137,60 +141,73 @@ exports.Login = async function (req, res) {
 };
 
 exports.googleLogin = async function (req, res) {
-    const session = await mongoose.startSession(); // Start a session for transaction
-    session.startTransaction();
-
     try {
-        const { email, firebaseUid } = req.body;
-        console.log("Received Google login request:", { email, firebaseUid });
+        const { idToken, firebaseUid } = req.body; // Receive firebaseUid from the frontend
+        console.log("Received Firebase UID:", firebaseUid);
+
+        // Verify the ID token using Google Auth Library
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com', // Replace with your webClientId
+        });
+
+        const payload = ticket.getPayload();
+        const { email, name, picture: photoURL } = payload;
 
         // Check if the user already exists
         let user = await User.findOne({ email });
         if (!user) {
             console.log("User not found, creating a new user");
 
-            // Create a new User instance if not exists
+            // Create a new User instance with default values
             user = new User({
+                username: email.split("@")[0], // Use email prefix as username
                 email,
-                firebaseUid,
-                role: "user", // Set role as user
-                status: "active", // Google users are considered active
-                firstName: 'FirstName',
-                lastName: 'LastName',
-                phoneNumber: '09283447155',
-                address: 'Default Address',
-                zipCode: '1700',
+                firebaseUid, // Save the Firebase UID in the database
+                firstName: name.split(" ")[0],
+                lastName: name.split(" ").slice(1).join(" "),
+                phoneNumber: "00000000000", // Default phone number
+                address: "Default Address", // Default address
+                zipCode: "0000", // Default zip code
                 profileImage: {
-                    public_id: 'register/users/kbr9b1dcvxicc618sejk',
-                    url: 'https://res.cloudinary.com/dutui5dbt/image/upload/v1732375637/register/users/kbr9b1dcvxicc618sejk.png'
-                }
+                    public_id: "register/users/google-login-profile",
+                    url: photoURL || "https://default-profile-image-url.com/default-profile.png", // Use a default image if none provided
+                },
             });
 
-            // Save the user in the database with the transaction session
-            await user.save({ session });
+            await user.save();
             console.log("New user created and saved:", user);
         } else {
             console.log("User found:", user);
+
+            // Ensure default values are set for existing users if fields are missing
+            user.phoneNumber = user.phoneNumber || "00000000000";
+            user.address = user.address || "Default Address";
+            user.zipCode = user.zipCode || "0000";
+
+            // Save any updates to the user
+            await user.save();
         }
 
         // Generate JWT token
         const token = user.getJwtToken();
         console.log("Generated JWT token:", token);
 
-        // Commit the transaction
-        await session.commitTransaction();
-        session.endSession();
-
         // Return the token and user information
         return res.status(200).json({
-            success: true,
             token,
-            userId: user._id 
+            userId: user._id,
+            email: user.email,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phoneNumber: user.phoneNumber, // Include phoneNumber
+            address: user.address, // Include address
+            zipCode: user.zipCode, // Include zipCode
+            profileImage: user.profileImage, // Include profileImage
+            firebaseUid: user.firebaseUid, // Include Firebase UID in the response
         });
-
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.error("Error during Google login:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
