@@ -1,6 +1,48 @@
 const mongoose = require('mongoose');
-const { ObjectId } = mongoose.Schema;
 const slugify = require('slugify');
+
+// Define enums for shoe categories
+const SHOE_CATEGORIES = {
+  ATHLETIC: 'athletic',
+  RUNNING: 'running',
+  BASKETBALL: 'basketball',
+  CASUAL: 'casual',
+  FORMAL: 'formal',
+  BOOTS: 'boots',
+  SANDALS: 'sandals',
+  SNEAKERS: 'sneakers',
+  HIKING: 'hiking',
+  WALKING: 'walking',
+  TRAINING: 'training',
+  SOCCER: 'soccer',
+  SKATEBOARDING: 'skateboarding',
+  TENNIS: 'tennis',
+  SLIP_ONS: 'slip-ons'
+};
+
+// Define enums for shoe brands
+const SHOE_BRANDS = {
+  NIKE: 'nike',
+  ADIDAS: 'adidas',
+  PUMA: 'puma',
+  REEBOK: 'reebok',
+  NEW_BALANCE: 'new-balance',
+  ASICS: 'asics',
+  CONVERSE: 'converse',
+  VANS: 'vans',
+  UNDER_ARMOUR: 'under-armour',
+  JORDAN: 'jordan',
+  TIMBERLAND: 'timberland',
+  SKECHERS: 'skechers',
+  FILA: 'fila',
+  BROOKS: 'brooks',
+  CROCS: 'crocs',
+  CLARKS: 'clarks',
+  BIRKENSTOCK: 'birkenstock',
+  HOKA: 'hoka',
+  ON_RUNNING: 'on-running',
+  SALOMON: 'salomon'
+};
 
 const productSchema = new mongoose.Schema({
   name: {
@@ -27,17 +69,41 @@ const productSchema = new mongoose.Schema({
     lowercase: true,
   },
   image: [String],
-  // category: {
-  //   type: ObjectId,
-  //   ref: 'Category',  // Refers to the Category model
-  //   required: true,
-  // },
-  // brand: {
-  //   type: ObjectId,
-  //   ref: 'Brand',  // Refers to the Brand model
-  //   required: true,
-  // }
-});
+  category: {
+    type: String,
+    required: true,
+    enum: Object.values(SHOE_CATEGORIES)
+  },
+  brand: {
+    type: String,
+    required: true,
+    enum: Object.values(SHOE_BRANDS)
+  },
+  // Additional shoe-specific fields
+  size: {
+    type: [String], // Array of available sizes
+    required: true
+  },
+  color: {
+    type: [String], // Array of available colors
+    required: true
+  },
+  gender: {
+    type: String,
+    enum: ['men', 'women', 'unisex', 'kids'],
+    required: true
+  },
+  material: {
+    type: String
+  },
+  isWaterproof: {
+    type: Boolean,
+    default: false
+  }
+}, { timestamps: true });
+
+productSchema.statics.SHOE_CATEGORIES = SHOE_CATEGORIES;
+productSchema.statics.SHOE_BRANDS = SHOE_BRANDS;
 
 productSchema.pre('save', function (next) {
   this.slug = slugify(this.name, { lower: true });
@@ -50,4 +116,10 @@ productSchema.methods.updateStock = async function (quantity) {
   await this.save();
 };
 
-module.exports = mongoose.model('Product', productSchema);
+const Product = mongoose.model('Product', productSchema);
+
+module.exports = {
+  Product,
+  SHOE_CATEGORIES,
+  SHOE_BRANDS
+};
