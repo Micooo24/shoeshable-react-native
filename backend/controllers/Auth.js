@@ -221,8 +221,8 @@ exports.googleLogin = async function (req, res) {
     }
 };
 
-//Get User Profile via middleware
-exports.getUserProfile = async function (req, res, next) {
+//Get User data via middleware
+exports.getUserData= async function (req, res, next) {
     try {
         // Fetch user by ID
         const user = await User.findById(req.user.id);

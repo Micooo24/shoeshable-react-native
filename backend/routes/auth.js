@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { Register, Login, googleLogin, getUserProfile, updateProfile} = require('../controllers/Auth');
+const { Register, Login, googleLogin, getUserData, updateProfile} = require('../controllers/Auth');
 const { isAuthenticatedUser } = require("../middlewares/auth");
 const upload = require("../utils/multer");
 
@@ -13,6 +13,6 @@ router.post("/google-login", googleLogin);
 
 
 //Authentication with middleware
-router.get('/profile', isAuthenticatedUser, getUserProfile);
+router.get('/profile', isAuthenticatedUser, getUserData);
 router.put('/profile/update', isAuthenticatedUser,  upload.single("profileImage"), updateProfile)
 module.exports = router;
