@@ -1,17 +1,24 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
-import { saveToken, saveUserData } from '../../utils/authentication';
+import { initializeDatabase, saveToken } from '../../utils/Auth';
 import baseURL from '../../assets/common/baseurl';
 import axios from 'axios';
 
 const Login = ({ navigation }) => {
+  useEffect(() => {
+    const setupDatabase = async () => {
+      await initializeDatabase(); // Ensure the database is ready
+    };
+
+    setupDatabase();
+  }, []);
+
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -26,168 +33,107 @@ const Login = ({ navigation }) => {
 
   const handleGoogleLogin = async () => {
     try {
-        setLoading(true);
-        console.log('Starting Google Sign-In process...');
+      setLoading(true);
+      console.log('Starting Google Sign-In process...');
 
-        // 1. Check for Play Services
-        await GoogleSignin.hasPlayServices({
-            showPlayServicesUpdateDialog: true,
-        });
-
-        // 2. Perform Google Sign-In
-        const signInResult = await GoogleSignin.signIn();
-        console.log('Google Sign-In result:', signInResult);
-
-        // 3. Get tokens
-        const { idToken } = await GoogleSignin.getTokens();
-        if (!idToken) {
-            throw new Error('No ID token found');
-        }
-
-        // 4. Authenticate with Firebase to get the firebaseUid
-        const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-        const firebaseUser = await auth().signInWithCredential(googleCredential);
-        const firebaseUid = firebaseUser.user.uid; // Get the Firebase UID
-        console.log('Firebase UID:', firebaseUid);
-
-        // 5. Send ID token and firebaseUid to the backend
-        const response = await axios.post(`${baseURL}/api/auth/google-login`, {
-            idToken, // Send the ID token to the backend
-            firebaseUid, // Pass the Firebase UID to the backend
-        });
-
-        // 6. Handle backend response
-        const { token, userId, email, username, firstName, lastName, phoneNumber, address, zipCode, profileImage } = response.data;
-        console.log('Backend response:', response.data);
-
-        // Save the token and user data locally
-        await saveToken(token);
-        await saveUserData({
-            userId,
-            email,
-            username,
-            firstName,
-            lastName,
-            phoneNumber,
-            address,
-            zipCode,
-            profileImage,
-            firebaseUid, // Save the Firebase UID locally
-        });
-
-        setLoading(false);
-        navigation.navigate('Shop'); // Navigate to the next screen
-    } catch (error) {
-        setLoading(false);
-        console.error('Google Sign-In Error:', error);
-
-        let errorMessage = 'Sign-in failed';
-        if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-            errorMessage = 'Sign-in cancelled';
-        } else if (error.code === statusCodes.IN_PROGRESS) {
-            errorMessage = 'Sign-in already in progress';
-        } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-            errorMessage = 'Google Play Services not available';
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        Alert.alert('Error', errorMessage);
-    }
-};
-
-const handleLogin = async () => {
-  if (!formData.email || !formData.password) {
-      Alert.alert('Error', 'Please enter both email and password');
-      return;
-  }
-
-  setLoading(true);
-
-  try {
-      // Make a POST request to the backend login endpoint
-      const response = await axios.post(`${baseURL}/api/auth/login`, {
-          email: formData.email,
-          password: formData.password,
+      // 1. Check for Play Services
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
       });
 
-      // Extract the token and user data from the response
-      const { token, user } = response.data;
+      // 2. Perform Google Sign-In
+      const signInResult = await GoogleSignin.signIn();
+      console.log('Google Sign-In result:', signInResult);
 
-      // Save the token and user data locally
-      await saveToken(token);
-      await saveUserData({
-          uid: user._id,
-          email: user.email,
-          username: user.username,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phoneNumber: user.phoneNumber,
-          address: user.address,
-          zipCode: user.zipCode,
-          profileImage: user.profileImage,
+      const email = signInResult.user.email;
+      console.log('Google user email:', email);
+
+      // 3. Get tokens
+      const { idToken } = await GoogleSignin.getTokens();
+      if (!idToken) {
+        throw new Error('No ID token found');
+      }
+
+      // 4. Authenticate with Firebase to get the firebaseUid
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+      const firebaseUser = await auth().signInWithCredential(googleCredential);
+      const firebaseUid = firebaseUser.user.uid; // Get the Firebase UID
+
+      console.log('Firebase UID:', firebaseUid);
+
+      // 5. Send ID token and firebaseUid to the backend
+      const response = await axios.post(`${baseURL}/api/auth/google-login`, {
+        idToken, // Send the ID token to the backend
+        firebaseUid, // Pass the Firebase UID to the backend
       });
+
+      // 6. Handle backend response
+      const { token } = response.data;
+      console.log('Backend response:', response.data);
+
+      // Save the token locally
+      await saveToken(token, email);
 
       setLoading(false);
-      navigation.navigate('Home'); // Navigate to your main screen
-  } catch (error) {
+      navigation.navigate('Shop'); // Navigate to the next screen
+    } catch (error) {
+      setLoading(false);
+      console.error('Google Sign-In Error:', error);
+
+      let errorMessage = 'Sign-in failed';
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        errorMessage = 'Sign-in cancelled';
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        errorMessage = 'Sign-in already in progress';
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        errorMessage = 'Google Play Services not available';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert('Error', errorMessage);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!formData.email || !formData.password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Make a POST request to the backend login endpoint
+      const response = await axios.post(`${baseURL}/api/auth/login`, {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // Extract the token from the response
+      const { token } = response.data;
+
+      // Save the token and email locally
+      await saveToken(token, formData.email);
+
+      setLoading(false);
+      navigation.navigate('Shop'); // Navigate to the next screen
+    } catch (error) {
       setLoading(false);
       console.error('Login Error:', error);
 
       let errorMessage = 'Login failed. Please try again.';
       if (error.response && error.response.data && error.response.data.message) {
-          errorMessage = error.response.data.message;
+        errorMessage = error.response.data.message;
       }
 
       Alert.alert('Login Error', errorMessage);
-  }
-};
-  
-const handleSubmit = async () => {
-    setLoading(true);
-    const { email, password } = formData;
-
-    try {
-        // Make a POST request to the backend login endpoint
-        const response = await axios.post(`${baseURL}/api/auth/login`, {
-            email,
-            password,
-        });
-
-        // Extract the token and user data from the response
-        const { token, user } = response.data;
-
-        // Save the token and user data locally
-        await saveToken(token);
-        await saveUserData({
-            uid: user._id,
-            email: user.email,
-            username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phoneNumber: user.phoneNumber,
-            address: user.address,
-            zipCode: user.zipCode,
-            profileImage: user.profileImage,
-        });
-
-        setLoading(false);
-        navigation.navigate('Shop'); // Navigate to the next screen
-    } catch (error) {
-        setLoading(false);
-        console.error('Login Error:', error);
-
-        let errorMessage = 'Login failed. Please try again.';
-        if (error.response && error.response.data && error.response.data.message) {
-            errorMessage = error.response.data.message;
-        }
-
-        Alert.alert('Login Error', errorMessage);
     }
-};
+  };
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
@@ -200,14 +146,13 @@ const handleSubmit = async () => {
       </View>
 
       <View style={styles.formContainer}>
-        {/* Email and Password Inputs remain the same */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter your email"
             keyboardType="email-address"
-            onChangeText={(text) => setFormData({...formData, email: text})}
+            onChangeText={(text) => setFormData({ ...formData, email: text })}
             value={formData.email}
           />
         </View>
@@ -218,21 +163,21 @@ const handleSubmit = async () => {
             style={styles.input}
             placeholder="Enter your password"
             secureTextEntry
-            onChangeText={(text) => setFormData({...formData, password: text})}
+            onChangeText={(text) => setFormData({ ...formData, password: text })}
             value={formData.password}
           />
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.forgotPassword}
           onPress={() => navigation.navigate('ForgotPassword')}
         >
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.button}
-          onPress={handleSubmit}
+          onPress={handleLogin}
           disabled={loading}
         >
           {loading ? (
@@ -242,7 +187,7 @@ const handleSubmit = async () => {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.googleButton}
           onPress={handleGoogleLogin}
           disabled={loading}

@@ -9,16 +9,18 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
-  Dimensions
+  Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { removeToken } from '../../utils/authentication'; 
+import { getToken, removeToken } from '../../utils/Auth'; // Import getToken and removeToken
 const { width } = Dimensions.get('window');
 
 const Shop = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [user, setUser] = useState(null); // State to store the logged-in user's info
 
   // Mock categories
   const categories = ['All', 'Sneakers', 'Running', 'Basketball', 'Casual'];
@@ -69,22 +71,42 @@ const Shop = ({ navigation }) => {
     },
   ];
 
+  // Fetch the logged-in user's token and email
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const loggedInUser = await getToken(); // Retrieve the token and email
+        if (loggedInUser) {
+          console.log('Logged-in user:', loggedInUser);
+          setUser(loggedInUser); // Set the user state
+        } else {
+          console.log('No user is currently logged in');
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error fetching logged-in user:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
   useEffect(() => {
     // Filter products based on selected category and search query
     let filteredProducts = [...mockProducts];
-    
+
     if (selectedCategory !== 'All') {
       filteredProducts = filteredProducts.filter(
         (item) => item.category === selectedCategory
       );
     }
-    
+
     if (searchQuery) {
       filteredProducts = filteredProducts.filter((item) =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     setProducts(filteredProducts);
   }, [selectedCategory, searchQuery]);
 
@@ -92,9 +114,12 @@ const Shop = ({ navigation }) => {
   const handleLogout = async () => {
     try {
       await removeToken(); // Clear token and user data
-      navigation.navigate('Home');
+      setUser(null); // Clear the user state
+      Alert.alert('Logout', 'You have been logged out successfully.');
+      navigation.navigate('Home'); // Navigate to the Home screen
     } catch (error) {
       console.error('Error during logout:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
     }
   };
 
@@ -131,6 +156,13 @@ const Shop = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Display logged-in user info */}
+      {user && (
+        <View style={styles.userInfo}>
+          <Text style={styles.userText}>Logged in as: {user.email}</Text>
+        </View>
+      )}
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -194,6 +226,18 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  userInfo: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  userText: {
+    fontSize: 14,
+    color: '#333',
   },
   searchContainer: {
     flexDirection: 'row',
