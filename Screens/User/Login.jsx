@@ -35,51 +35,58 @@ const Login = ({ navigation }) => {
     try {
       setLoading(true);
       console.log('Starting Google Sign-In process...');
-
+  
       // 1. Check for Play Services
       await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
-
+  
       // 2. Perform Google Sign-In
       const signInResult = await GoogleSignin.signIn();
-      console.log('Google Sign-In result:', signInResult);
-
-      const email = signInResult.user.email;
+      console.log('Google Sign-In result:', JSON.stringify(signInResult, null, 2));
+  
+      // Access the user object from signInResult.data
+      const user = signInResult?.user || signInResult?.data?.user;
+      if (!user) {
+        throw new Error('Google Sign-In did not return user information');
+      }
+  
+      // Extract the email from the user object
+      const email = user.email;
       console.log('Google user email:', email);
-
+  
       // 3. Get tokens
       const { idToken } = await GoogleSignin.getTokens();
       if (!idToken) {
         throw new Error('No ID token found');
       }
-
+  
       // 4. Authenticate with Firebase to get the firebaseUid
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
       const firebaseUser = await auth().signInWithCredential(googleCredential);
       const firebaseUid = firebaseUser.user.uid; // Get the Firebase UID
-
+  
       console.log('Firebase UID:', firebaseUid);
-
+  
       // 5. Send ID token and firebaseUid to the backend
       const response = await axios.post(`${baseURL}/api/auth/google-login`, {
         idToken, // Send the ID token to the backend
         firebaseUid, // Pass the Firebase UID to the backend
       });
-
+  
       // 6. Handle backend response
       const { token } = response.data;
       console.log('Backend response:', response.data);
-
+  
       // Save the token locally
       await saveToken(token, email);
-
+  
       setLoading(false);
       navigation.navigate('Shop'); // Navigate to the next screen
     } catch (error) {
       setLoading(false);
       console.error('Google Sign-In Error:', error);
-
+  
       let errorMessage = 'Sign-in failed';
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         errorMessage = 'Sign-in cancelled';
@@ -90,11 +97,10 @@ const Login = ({ navigation }) => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-
+  
       Alert.alert('Error', errorMessage);
     }
   };
-
   const handleLogin = async () => {
     if (!formData.email || !formData.password) {
       Alert.alert('Error', 'Please enter both email and password');
