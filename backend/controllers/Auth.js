@@ -246,7 +246,8 @@ exports.getUserData= async function (req, res, next) {
                 phoneNumber: user.phoneNumber,
                 address: user.address,
                 zipCode: user.zipCode,
-                profileImage: user.profileImage
+                profileImage: user.profileImage,
+                role: user.role
 
             }
         });
