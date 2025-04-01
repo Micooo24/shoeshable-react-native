@@ -179,6 +179,13 @@ const Home = ({ navigation }) => {
         <Ionicons name="search-outline" size={24} color={COLORS.white} />
       </TouchableOpacity>
       
+      <TouchableOpacity 
+        style={styles.iconButton}
+        onPress={() => navigation.navigate('Product')}
+      >
+        <MaterialIcons name="dashboard" size={22} color={COLORS.white} />
+      </TouchableOpacity>
+      
       <TouchableOpacity style={styles.cartButton}>
         <Icon name="cart-outline" size={24} color={COLORS.white} />
         <View style={styles.cartBadge}>
@@ -187,7 +194,7 @@ const Home = ({ navigation }) => {
       </TouchableOpacity>
     </View>
   );
-  
+
   const renderCategoryFilter = () => (
     <View style={styles.categoryFilterContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryFilterContent}>
