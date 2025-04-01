@@ -12,7 +12,7 @@ export const fetchEnumValues = () => async (dispatch) => {
   try {
     dispatch({ type: FETCH_ENUM_VALUES_REQUEST });
     
-    const response = await axios.get(`${baseURL}/api/enums`);
+    const response = await axios.get(`${baseURL}/api/products/enums`);
     
     dispatch({ 
       type: FETCH_ENUM_VALUES_SUCCESS, 
@@ -33,7 +33,7 @@ export const fetchEnumValues = () => async (dispatch) => {
 
 export const getProducts = () => async (dispatch) => {
   try {
-    const response = await axios.get(`${baseURL}/api/get-products`);
+    const response = await axios.get(`${baseURL}/api/products/get-products`);
     dispatch({ type: GET_PRODUCTS, payload: response.data.products });
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -91,7 +91,7 @@ export const addProduct = (product) => async (dispatch) => {
 
     console.log('FormData:', formData);
 
-    const response = await axios.post(`${baseURL}/api/add-product`, formData, {
+    const response = await axios.post(`${baseURL}/api/products/add-product`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -158,7 +158,7 @@ export const updateProduct = (id, updatedProduct) => async (dispatch) => {
       });
     }
 
-    const response = await axios.put(`${baseURL}/api/update-product/${id}`, formData, {
+    const response = await axios.put(`${baseURL}/api/products/update-product/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -171,14 +171,12 @@ export const updateProduct = (id, updatedProduct) => async (dispatch) => {
 
 export const deleteProduct = (id) => async (dispatch) => {
   try {
-    await axios.delete(`${baseURL}/api/remove-product/${id}`);
+    await axios.delete(`${baseURL}/api/products/remove-product/${id}`);
     dispatch({ type: DELETE_PRODUCT, payload: id });
   } catch (error) {
     console.error('Error deleting product:', error);
   }
 };
-
-// Additional actions for shoe-specific features
 
 export const getProductsByCategory = (category) => async (dispatch) => {
   try {

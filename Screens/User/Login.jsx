@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import baseURL from '../../assets/common/baseurl';
 
 const Login = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -8,9 +9,40 @@ const Login = ({ navigation }) => {
     password: ''
   });
 
-  const handleSubmit = () => {
-    // Add login logic here
-    console.log(formData);
+  const handleLogin = async () => {
+    if (!formData.email || !formData.password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }s
+
+    setLoading(true);
+
+    try {
+      // Make a POST request to the backend login endpoint
+      const response = await axios.post(`${baseURL}/api/auth/login`, {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // Extract the token from the response
+      const { token } = response.data;
+
+      // Save the token and email locally
+      await saveToken(token, formData.email);
+
+      setLoading(false);
+      navigation.navigate('Home'); // Navigate to the next screen
+    } catch (error) {
+      setLoading(false);
+      console.error('Login Error:', error);
+
+      let errorMessage = 'Login failed. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      Alert.alert('Login Error', errorMessage);
+    }
   };
 
   return (
@@ -59,7 +91,7 @@ const Login = ({ navigation }) => {
 
         <TouchableOpacity 
           style={styles.button}
-          onPress={handleSubmit}
+          onPress={handleLogin}
         >
           <Text style={styles.buttonText}>LOGIN</Text>
         </TouchableOpacity>

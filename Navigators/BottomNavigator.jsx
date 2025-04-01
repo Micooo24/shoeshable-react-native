@@ -81,9 +81,9 @@ const BottomNavigator = ({ navigation, activeScreen = 'Home' }) => {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.tabItem, currentRouteName === 'Profile' && styles.activeTabItem]}
-        onPress={() => navigateTo('Profile')}
-      >
+          style={[styles.tabItem, currentRouteName === 'Profile' && styles.activeTabItem]}
+          onPress={() => navigation.navigate('Auth', { screen: 'Profile' })}
+        >
         <Feather
           name="user"
           size={22}

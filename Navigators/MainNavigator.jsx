@@ -8,7 +8,6 @@ import BottomNavigator from './BottomNavigator';
 import Cart from "../Screens/Features/Cart";
 import Category from "../Screens/Features/Category";
 import Trends from "../Screens/Features/Trends";
-import Profile from '../Screens/User/Profile';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,11 +42,6 @@ const MainNavigator = () => {
       options={{ headerShown: false }} />
       <Stack.Screen name="Cart" component={Cart}
       options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="Profile" 
-        component={Profile}
-        options={{ headerShown: false }}
-      />
     </Stack.Navigator>
   );
 };
