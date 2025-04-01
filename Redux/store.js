@@ -1,5 +1,5 @@
 import { createStore, applyMiddleware, combineReducers } from 'redux';
-import thunk from 'redux-thunk';
+import { thunk }from 'redux-thunk';
 import { productReducer } from './reducers/productReducer';
 
 // Combine reducers (useful when scaling the app)

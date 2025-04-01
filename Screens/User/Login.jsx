@@ -82,7 +82,7 @@ const Login = ({ navigation }) => {
       await saveToken(token, email);
   
       setLoading(false);
-      navigation.navigate('Shop'); // Navigate to the next screen
+      navigation.navigate('Home'); // Navigate to the next screen
     } catch (error) {
       setLoading(false);
       console.error('Google Sign-In Error:', error);
@@ -123,7 +123,7 @@ const Login = ({ navigation }) => {
       await saveToken(token, formData.email);
 
       setLoading(false);
-      navigation.navigate('Shop'); // Navigate to the next screen
+      navigation.navigate('Home'); // Navigate to the next screen
     } catch (error) {
       setLoading(false);
       console.error('Login Error:', error);
