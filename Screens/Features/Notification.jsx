@@ -16,8 +16,8 @@ const COLORS = {
   success: '#2ecc71',      // Success green
   warning: '#f39c12',      // Warning orange
   danger: '#e74c3c',       // Danger red
-  shadow: 'rgba(44, 62, 80, 0.15)', 
-  accent: '#3498db',       
+  shadow: 'rgba(44, 62, 80, 0.15)', // Shadow based on primary color
+  accent: '#3498db',       // Accent blue
 };
 
 // Notice the { navigation } parameter here - this is crucial

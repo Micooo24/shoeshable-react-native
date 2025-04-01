@@ -131,7 +131,6 @@ const ProductScreen = () => {
     color: [],
     gender: GENDER_OPTIONS[0],
     material: '',
-    isWaterproof: false
   });
 
   useEffect(() => {
@@ -266,7 +265,6 @@ const ProductScreen = () => {
       color: [],
       gender: GENDER_OPTIONS[0],
       material: '',
-      isWaterproof: false
     });
     setCurrentSize('');
     setCurrentColor('');
@@ -358,7 +356,6 @@ const ProductScreen = () => {
         color: colors,
         gender: product.gender || GENDER_OPTIONS[0],
         material: product.material || '',
-        isWaterproof: product.isWaterproof || false
       });
       setCurrentProductId(product._id);
       setIsEditing(true);
@@ -460,15 +457,6 @@ const ProductScreen = () => {
         )}
         
         <View style={styles.productInfo}>
-          <View style={styles.productNameRow}>
-            <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-            {item.isWaterproof && (
-              <View style={styles.waterproofBadge}>
-                <MaterialCommunityIcons name="water" size={12} color={COLORS.white} />
-                <Text style={styles.waterproofText}>Waterproof</Text>
-              </View>
-            )}
-          </View>
           
           {item.description ? (
             <Text style={styles.productDescription} numberOfLines={2}>{item.description}</Text>
@@ -824,19 +812,6 @@ const ProductScreen = () => {
                       placeholderTextColor={COLORS.darkGrey}
                       value={newProduct.material}
                       onChangeText={(text) => setNewProduct({ ...newProduct, material: text })}
-                    />
-                  </View>
-                </View>
-                
-                <View style={styles.formGroup}>
-                  <View style={styles.switchContainer}>
-                    <Text style={styles.formLabel}>Waterproof</Text>
-                    <Switch
-                      trackColor={{ false: COLORS.grey, true: COLORS.primaryLight }}
-                      thumbColor={newProduct.isWaterproof ? COLORS.primary : COLORS.darkGrey}
-                      ios_backgroundColor={COLORS.grey}
-                      onValueChange={(value) => setNewProduct({ ...newProduct, isWaterproof: value })}
-                      value={newProduct.isWaterproof}
                     />
                   </View>
                 </View>

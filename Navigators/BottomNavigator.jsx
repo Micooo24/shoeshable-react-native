@@ -1,168 +1,137 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 
-import CategoryScreen from '../Screens/Features/CategoryScreen';
-import TrendsScreen from '../Screens/Features/TrendsScreen';
-import CartScreen from '../Screens/Features/CartScreen';
-import ProfileScreen from '../Screens/User/Profile';
-
-// Color palette 
+// Updated color palette to match the Home component
 const COLORS = {
-  primary: '#944535',
-  primaryLight: '#B56E61',
-  primaryDark: '#723227',
-  white: '#FFFFFF',
-  light: '#F8F5F4',
-  grey: '#E8E1DF',
-  darkGrey: '#9A8D8A',
-  text: '#3D2E2A',
-  textLight: '#5D4E4A',
-  success: '#5A8F72',
-  warning: '#EDAF6F',
-  danger: '#D35E4D',
-  shadow: 'rgba(76, 35, 27, 0.15)',
-  gold: '#FFD700',
-  navy: '#001F3F'
+  primary: '#2c3e50',      // Dark blue-gray
+  primaryLight: '#34495e', // Slightly lighter blue-gray
+  primaryDark: '#1a2530',  // Darker blue-gray
+  white: '#ffffff',        // Pure white
+  light: '#ecf0f1',        // Light gray
+  grey: '#bdc3c7',         // Medium gray
+  darkGrey: '#7f8c8d',     // Darker gray
+  text: '#2c3e50',         // Text in dark blue-gray
+  textLight: '#7f8c8d',    // Light text in gray
+  success: '#2ecc71',      // Success green
+  warning: '#f39c12',      // Warning orange
+  danger: '#e74c3c',       // Danger red
+  shadow: 'rgba(44, 62, 80, 0.15)', // Shadow based on primary color
+  accent: '#3498db',       // Accent blue
 };
 
-const BottomNavigator = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState('Home');
+const BottomNavigator = ({ navigation, activeScreen = 'Home' }) => {
+  // Use activeScreen prop as the current route
+  const currentRouteName = activeScreen;
 
-  // Handle tab changes
-  const handleTabPress = (tabName) => {
-    setActiveTab(tabName);
-  };
-
-  // Render the active screen
-  const renderScreen = () => {
-    switch (activeTab) {
-      case 'Home':
-        return <Home navigation={navigation} />;
-      case 'Category':
-        return <CategoryScreen navigation={navigation} />;
-      case 'Trends':
-        return <TrendsScreen navigation={navigation} />;
-      case 'Cart':
-        return <CartScreen navigation={navigation} />;
-      case 'Me':
-        return <ProfileScreen navigation={navigation} />;
-      default:
-        return <Home navigation={navigation} />;
+  // Safe navigation handler with fallback
+  const navigateTo = (screenName) => {
+    // If navigation is not available, just log it
+    if (!navigation || typeof navigation.navigate !== 'function') {
+      console.log(`Navigation to ${screenName} not available`);
+      return;
+    }
+    
+    // Only navigate if we're not already on this screen
+    if (currentRouteName !== screenName) {
+      navigation.navigate(screenName);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.light} />
-      
-      {/* Main Content Area */}
-      <View style={styles.content}>
-        {renderScreen()}
-      </View>
+    <View style={styles.bottomNav}>
+      <TouchableOpacity
+        style={[styles.tabItem, currentRouteName === 'Home' && styles.activeTabItem]}
+        onPress={() => navigateTo('Home')}
+      >
+        <Feather
+          name="home"
+          size={22}
+          color={currentRouteName === 'Home' ? COLORS.primary : COLORS.darkGrey}
+          style={styles.tabIcon}
+        />
+        <Text style={[styles.tabLabel, currentRouteName === 'Home' && styles.activeTabLabel]}>
+          Home
+        </Text>
+      </TouchableOpacity>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'Home' && styles.activeTabItem]}
-          onPress={() => handleTabPress('Home')}
-        >
-          <Feather
-            name="home"
-            size={22}
-            color={activeTab === 'Home' ? COLORS.navy : COLORS.darkGrey}
-            style={styles.tabIcon}
-          />
-          <Text style={[styles.tabLabel, activeTab === 'Home' && styles.activeTabLabel]}>
-            Home
-          </Text>
-        </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tabItem, currentRouteName === 'Category' && styles.activeTabItem]}
+        onPress={() => navigateTo('Category')}
+      >
+        <Feather
+          name="grid"
+          size={22}
+          color={currentRouteName === 'Category' ? COLORS.primary : COLORS.darkGrey}
+          style={styles.tabIcon}
+        />
+        <Text style={[styles.tabLabel, currentRouteName === 'Category' && styles.activeTabLabel]}>
+          Category
+        </Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'Category' && styles.activeTabItem]}
-          onPress={() => handleTabPress('Category')}
-        >
-          <Feather
-            name="grid"
-            size={22}
-            color={activeTab === 'Category' ? COLORS.navy : COLORS.darkGrey}
-            style={styles.tabIcon}
-          />
-          <Text style={[styles.tabLabel, activeTab === 'Category' && styles.activeTabLabel]}>
-            Category
-          </Text>
-        </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tabItem, currentRouteName === 'Trends' && styles.activeTabItem]}
+        onPress={() => navigateTo('Trends')}
+      >
+        <Feather
+          name="trending-up"
+          size={22}
+          color={currentRouteName === 'Trends' ? COLORS.primary : COLORS.darkGrey}
+          style={styles.tabIcon}
+        />
+        <Text style={[styles.tabLabel, currentRouteName === 'Trends' && styles.activeTabLabel]}>
+          Trends
+        </Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'Trends' && styles.activeTabItem]}
-          onPress={() => handleTabPress('Trends')}
-        >
-          <Feather
-            name="trending-up"
-            size={22}
-            color={activeTab === 'Trends' ? COLORS.navy : COLORS.darkGrey}
-            style={styles.tabIcon}
-          />
-          <Text style={[styles.tabLabel, activeTab === 'Trends' && styles.activeTabLabel]}>
-            Trends
-          </Text>
-        </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tabItem, currentRouteName === 'Cart' && styles.activeTabItem]}
+        onPress={() => navigateTo('Cart')}
+      >
+        <Feather
+          name="shopping-cart"
+          size={22}
+          color={currentRouteName === 'Cart' ? COLORS.primary : COLORS.darkGrey}
+          style={styles.tabIcon}
+        />
+        <Text style={[styles.tabLabel, currentRouteName === 'Cart' && styles.activeTabLabel]}>
+          Cart
+        </Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'Cart' && styles.activeTabItem]}
-          onPress={() => handleTabPress('Cart')}
-        >
-          <Feather
-            name="shopping-cart"
-            size={22}
-            color={activeTab === 'Cart' ? COLORS.navy : COLORS.darkGrey}
-            style={styles.tabIcon}
-          />
-          <Text style={[styles.tabLabel, activeTab === 'Cart' && styles.activeTabLabel]}>
-            Cart
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 'Me' && styles.activeTabItem]}
-          onPress={() => handleTabPress('Me')}
-        >
-          <Feather
-            name="user"
-            size={22}
-            color={activeTab === 'Me' ? COLORS.navy : COLORS.darkGrey}
-            style={styles.tabIcon}
-          />
-          <Text style={[styles.tabLabel, activeTab === 'Me' && styles.activeTabLabel]}>
-            Me
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      <TouchableOpacity
+        style={[styles.tabItem, currentRouteName === 'Profile' && styles.activeTabItem]}
+        onPress={() => navigateTo('Profile')}
+      >
+        <Feather
+          name="user"
+          size={22}
+          color={currentRouteName === 'Profile' ? COLORS.primary : COLORS.darkGrey}
+          style={styles.tabIcon}
+        />
+        <Text style={[styles.tabLabel, currentRouteName === 'Profile' && styles.activeTabLabel]}>
+          Me
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
 export default BottomNavigator;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.light,
-  },
-  content: {
-    flex: 1,
-  },
   bottomNav: {
     flexDirection: 'row',
     height: 60,
     borderTopWidth: 1,
     borderTopColor: COLORS.grey,
     backgroundColor: COLORS.white,
-    elevation: 10,
+    elevation: 8,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   tabItem: {
     flex: 1,
@@ -171,8 +140,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   activeTabItem: {
-    borderTopWidth: 2,
-    borderTopColor: COLORS.navy,
+    borderTopWidth: 3,
+    borderTopColor: COLORS.primary,
   },
   tabIcon: {
     marginBottom: 4,
@@ -183,7 +152,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   activeTabLabel: {
-    color: COLORS.navy,
+    color: COLORS.primary,
     fontWeight: '600',
   },
 });

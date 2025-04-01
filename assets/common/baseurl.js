@@ -3,7 +3,7 @@ import {Platform} from 'react-native';
 let baseURL = '';
 
 {Platform.OS == 'android'
-    ? baseURL = 'http://192.168.127.105:5000'
+    ? baseURL = 'http://192.168.127.105:5000/api'
     : baseURL = 'http://localhost:3000'
 }   
 

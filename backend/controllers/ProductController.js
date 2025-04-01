@@ -43,8 +43,7 @@ exports.create = async (req, res) => {
       size, 
       color, 
       gender, 
-      material, 
-      isWaterproof 
+      material,
     } = req.body;
 
     // Check required fields
@@ -86,7 +85,6 @@ exports.create = async (req, res) => {
       color: Array.isArray(color) ? color : [color],
       gender,
       material,
-      isWaterproof: isWaterproof === 'true' || isWaterproof === true
     });
 
     await newProduct.save();
@@ -151,8 +149,7 @@ exports.update = async (req, res) => {
     size, 
     color, 
     gender, 
-    material, 
-    isWaterproof 
+    material,
   } = req.body;
 
   try {
@@ -205,8 +202,6 @@ exports.update = async (req, res) => {
     if (color) product.color = Array.isArray(color) ? color : [color];
     if (gender) product.gender = gender;
     if (material !== undefined) product.material = material;
-    if (isWaterproof !== undefined) product.isWaterproof = isWaterproof === 'true' || isWaterproof === true;
-    
     product.image = updatedImageUrls;
 
     await product.save();
@@ -293,8 +288,7 @@ exports.searchProducts = async (req, res) => {
       minPrice, 
       maxPrice, 
       size, 
-      color, 
-      isWaterproof 
+      color,
     } = req.query;
 
     const searchCriteria = {};
@@ -313,7 +307,6 @@ exports.searchProducts = async (req, res) => {
     if (gender) searchCriteria.gender = gender;
     if (size) searchCriteria.size = size;
     if (color) searchCriteria.color = { $regex: color, $options: 'i' };
-    if (isWaterproof !== undefined) searchCriteria.isWaterproof = isWaterproof === 'true';
     
     // Price range
     if (minPrice !== undefined || maxPrice !== undefined) {

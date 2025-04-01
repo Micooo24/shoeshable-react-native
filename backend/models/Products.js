@@ -96,10 +96,6 @@ const productSchema = new mongoose.Schema({
   material: {
     type: String
   },
-  isWaterproof: {
-    type: Boolean,
-    default: false
-  }
 }, { timestamps: true });
 
 productSchema.statics.SHOE_CATEGORIES = SHOE_CATEGORIES;

@@ -15,30 +15,36 @@ import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// Color palette
+// Updated color palette with requested colors
 const COLORS = {
-  primary: '#944535',
-  primaryLight: '#B56E61',
-  primaryDark: '#723227',
+  primary: '#2C3E50',       // Dark blue-gray (main color)
+  primaryLight: '#34495E',  // Slightly lighter variant of primary
+  primaryDark: '#1A2530',   // Darker variant of primary
+  
+  light: '#ECF0F1',         // Light gray (secondary color)
+  lightDark: '#BDC3C7',     // Darker variant of light
+  
   white: '#FFFFFF',
-  light: '#F8F5F4',
-  grey: '#E8E1DF',
-  darkGrey: '#9A8D8A',
-  text: '#3D2E2A',
-  textLight: '#5D4E4A',
-  success: '#5A8F72',
-  warning: '#EDAF6F',
-  danger: '#D35E4D',
-  shadow: 'rgba(76, 35, 27, 0.15)',
-  gold: '#FFD700',
-  navy: '#001F3F'
+  black: '#000000',
+  text: '#2C3E50',
+  textLight: '#7F8C8D',
+  
+  success: '#2ECC71',
+  warning: '#F39C12',
+  danger: '#E74C3C',
+  
+  shadow: 'rgba(44, 62, 80, 0.15)',
+  gold: '#F1C40F',
+  accent: '#3498DB'
 };
 
 const DisplaySingleProduct = ({ route, navigation }) => {
   const { product } = route.params;
 
   const getBrandIcon = (brand) => {
-    switch (brand) {
+    if (!brand) return <FontAwesome5 name="tag" size={18} color={COLORS.primary} />;
+    
+    switch (brand.toLowerCase()) {
       case 'nike':
         return <FontAwesome5 name="nike" size={18} color={COLORS.primary} />;
       case 'adidas':
@@ -51,7 +57,9 @@ const DisplaySingleProduct = ({ route, navigation }) => {
   };
 
   const getCategoryIcon = (category) => {
-    switch (category) {
+    if (!category) return <Icon name="shoe-sneaker" size={18} color={COLORS.primary} />;
+    
+    switch (category.toLowerCase()) {
       case 'running':
         return <Icon name="run" size={18} color={COLORS.primary} />;
       case 'basketball':
@@ -70,7 +78,9 @@ const DisplaySingleProduct = ({ route, navigation }) => {
   };
 
   const getGenderIcon = (gender) => {
-    switch (gender) {
+    if (!gender) return <Icon name="gender-male-female" size={18} color={COLORS.primary} />;
+    
+    switch (gender.toLowerCase()) {
       case 'men':
         return <FontAwesome5 name="male" size={18} color={COLORS.primary} />;
       case 'women':
@@ -84,7 +94,7 @@ const DisplaySingleProduct = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.navy} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -252,6 +262,7 @@ const DisplaySingleProduct = ({ route, navigation }) => {
           <Icon name="heart-outline" size={24} color={COLORS.primary} />
         </TouchableOpacity>
         
+        {/* Add to Cart Button - Vertical Layout */}
         <TouchableOpacity 
           style={[
             styles.addToCartButton,
@@ -259,9 +270,23 @@ const DisplaySingleProduct = ({ route, navigation }) => {
           ]}
           disabled={parseInt(product.stock) === 0}
         >
-          <Icon name="cart-plus" size={20} color={COLORS.white} />
-          <Text style={styles.addToCartText}>
-            {parseInt(product.stock) === 0 ? 'OUT OF STOCK' : 'ADD TO CART'}
+          <Icon name="cart-plus" size={24} color={COLORS.white} />
+          <Text style={styles.buttonText}>
+            {parseInt(product.stock) === 0 ? 'OUT OF STOCK' : 'Add to Cart'}
+          </Text>
+        </TouchableOpacity>
+        
+        {/* Buy Now Button */}
+        <TouchableOpacity 
+          style={[
+            styles.buyNowButton,
+            parseInt(product.stock) === 0 && styles.disabledButton
+          ]}
+          disabled={parseInt(product.stock) === 0}
+        >
+          <Icon name="flash" size={24} color={COLORS.primary} />
+          <Text style={styles.buyNowText}>
+            {parseInt(product.stock) === 0 ? 'OUT OF STOCK' : 'Buy Now'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -275,7 +300,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   header: {
-    backgroundColor: COLORS.navy,
+    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -366,7 +391,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.grey,
+    borderBottomColor: COLORS.light,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -416,7 +441,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.grey,
+    borderBottomColor: COLORS.light,
   },
   sectionTitle: {
     fontSize: 18,
@@ -433,7 +458,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.grey,
+    borderBottomColor: COLORS.light,
   },
   sizesGrid: {
     flexDirection: 'row',
@@ -447,7 +472,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: COLORS.grey,
+    borderColor: COLORS.lightDark,
   },
   sizeText: {
     fontSize: 14,
@@ -469,7 +494,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: COLORS.grey,
+    borderColor: COLORS.lightDark,
   },
   colorText: {
     fontSize: 14,
@@ -482,7 +507,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    borderTopColor: COLORS.grey,
+    borderTopColor: COLORS.light,
     backgroundColor: COLORS.white,
   },
   wishlistButton: {
@@ -494,26 +519,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.primaryLight,
   },
   addToCartButton: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.primary,
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderRadius: 8,
+    marginRight: 8,
+    elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  buyNowButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.light,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   disabledButton: {
-    backgroundColor: COLORS.darkGrey,
+    backgroundColor: COLORS.lightDark,
+    borderColor: COLORS.lightDark,
   },
-  addToCartText: {
+  buttonText: {
     color: COLORS.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 8,
+    fontWeight: '600',
+    fontSize: 12,
+    marginTop: 4,
   },
+  buyNowText: {
+    color: COLORS.primary,
+    fontWeight: '600',
+    fontSize: 12,
+    marginTop: 4,
+  }
 });
 
 export default DisplaySingleProduct;

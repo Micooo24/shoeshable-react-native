@@ -47,10 +47,6 @@ export const addProduct = (product) => async (dispatch) => {
     if (product.material) {
       formData.append('material', product.material);
     }
-    
-    if (product.isWaterproof !== undefined) {
-      formData.append('isWaterproof', product.isWaterproof.toString());
-    }
 
     // Handle images
     if (Array.isArray(product.image)) {
@@ -119,10 +115,6 @@ export const updateProduct = (id, updatedProduct) => async (dispatch) => {
     // Add optional fields if they exist
     if (updatedProduct.material !== undefined) {
       formData.append('material', updatedProduct.material);
-    }
-    
-    if (updatedProduct.isWaterproof !== undefined) {
-      formData.append('isWaterproof', updatedProduct.isWaterproof.toString());
     }
 
     // Handle images

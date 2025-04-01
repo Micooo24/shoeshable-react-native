@@ -8,34 +8,42 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
-  Dimensions
+  Dimensions,
+  StatusBar,
+  Animated,
+  Platform,
+  ScrollView
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { getProducts } from './../Redux/actions/productActions';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons, Feather, AntDesign } from '@expo/vector-icons';
+import BottomNavigator from '../Navigators/BottomNavigator';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Get screen width to calculate card width
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 48) / 2; // 2 columns with padding
+const { width, height } = Dimensions.get('window');
+const cardWidth = (width - 50) / 2;
 
-// Color palette (matching the colors used in ProductScreen)
+// Simplified color palette based on the requested colors
 const COLORS = {
-  primary: '#944535',
-  primaryLight: '#B56E61',
-  primaryDark: '#723227',
+  primary: '#2C3E50',       // Dark blue-gray (main color)
+  primaryLight: '#34495e',  // Slightly lighter variant of primary
+  primaryDark: '#1a2530',   // Darker variant of primary
+  primaryTransparent: 'rgba(44, 62, 80, 0.9)', // Transparent primary
+  
+  light: '#ECF0F1',         // Light gray (secondary color)
+  lightDark: '#BDC3C7',     // Darker variant of light
+  lightTransparent: 'rgba(236, 240, 241, 0.9)', // Transparent light
+  
   white: '#FFFFFF',
-  light: '#F8F5F4',
-  grey: '#E8E1DF',
-  darkGrey: '#9A8D8A',
-  text: '#3D2E2A',
-  textLight: '#5D4E4A',
-  success: '#5A8F72',
-  warning: '#EDAF6F',
-  danger: '#D35E4D',
-  shadow: 'rgba(76, 35, 27, 0.15)',
-  gold: '#FFD700',
-  navy: '#001F3F'
+  black: '#000000',
+  
+  success: '#2ecc71',       // We'll keep these alert colors for functionality
+  warning: '#f39c12',
+  danger: '#e74c3c',
+  
+  shadow: 'rgba(44, 62, 80, 0.15)',
 };
 
 const Home = ({ navigation }) => {
@@ -43,6 +51,26 @@ const Home = ({ navigation }) => {
   const products = useSelector((state) => state.product.products);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [scrollY] = useState(new Animated.Value(0));
+  
+  // Header animation values
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [120, 80],
+    extrapolate: 'clamp',
+  });
+  
+  const headerTitleSize = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [28, 22],
+    extrapolate: 'clamp',
+  });
+  
+  const headerSubtitleOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   const fetchProducts = useCallback(() => {
     setRefreshing(true);
@@ -61,133 +89,263 @@ const Home = ({ navigation }) => {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Fixed getBrandIcon function with corrected icons
   const getBrandIcon = (brand) => {
-    switch (brand) {
+    if (!brand) {
+      return <Icon name="tag-outline" size={14} color={COLORS.primary} />;
+    }
+    
+    switch (brand.toLowerCase()) {
       case 'nike':
-        return <FontAwesome5 name="nike" size={14} color={COLORS.navy} />;
+        return <Icon name="check-bold" size={14} color={COLORS.primary} />; // Using check icon instead of nike
       case 'adidas':
-        return <FontAwesome5 name="stripe-s" size={14} color={COLORS.navy} />;
+        return <Icon name="podium" size={14} color={COLORS.primary} />; // Using podium instead of stripe-s
       case 'jordan':
-        return <Icon name="basketball" size={14} color={COLORS.navy} />;
+        return <Icon name="basketball" size={14} color={COLORS.primary} />;
+      case 'puma':
+        return <Icon name="cat" size={14} color={COLORS.primary} />;
+      case 'reebok':
+        return <Icon name="delta" size={14} color={COLORS.primary} />;
+      case 'converse':
+        return <Icon name="star" size={14} color={COLORS.primary} />;
+      case 'vans':
+        return <Icon name="alpha-v" size={14} color={COLORS.primary} />; // Changed to alpha-v from MaterialCommunityIcons
+      case 'asics':
+        return <Icon name="run-fast" size={14} color={COLORS.primary} />;
       default:
-        return <FontAwesome5 name="tag" size={14} color={COLORS.navy} />;
+        return <Icon name="tag-outline" size={14} color={COLORS.primary} />;
     }
   };
 
   const handleProductPress = (product) => {
-    navigation.navigate('DisplaySingleProduct', { product });
+    navigation.navigate('SingleProduct', { product });
   };
 
   const renderProductCard = ({ item }) => (
     <TouchableOpacity
       style={styles.productCard}
       onPress={() => handleProductPress(item)}
-      activeOpacity={0.7}
+      activeOpacity={0.9}
     >
-      {/* Product Image */}
-      {item.image && item.image.length > 0 ? (
-        <Image
-          source={{
-            uri: typeof item.image[0] === 'string' 
-              ? item.image[0] 
-              : (item.image[0] && item.image[0].uri ? item.image[0].uri : null)
-          }}
-          style={styles.productImage}
-          resizeMode="cover"
+      {/* Product Image Container - Only displaying first image */}
+      <View style={styles.imageContainer}>
+        {item.image && Array.isArray(item.image) && item.image.length > 0 ? (
+          <Image
+            source={{
+              uri: typeof item.image[0] === 'string' 
+                ? item.image[0] 
+                : (item.image[0] && item.image[0].uri ? item.image[0].uri : null)
+            }}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Icon name="shoe-sneaker" size={48} color={COLORS.primaryLight} />
+          </View>
+        )}
+
+        {/* Gradient overlay on image */}
+        <LinearGradient
+          colors={['transparent', 'rgba(44, 62, 80, 0.7)']}
+          style={styles.imageGradient}
         />
-      ) : (
-        <View style={styles.imagePlaceholder}>
-          <Icon name="shoe-sneaker" size={48} color={COLORS.primaryLight} />
-        </View>
-      )}
 
-      {/* Waterproof Badge if applicable */}
-      {item.isWaterproof && (
-        <View style={styles.waterproofBadge}>
-          <Icon name="water" size={12} color={COLORS.white} />
-        </View>
-      )}
-
-      {/* Product Info */}
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={1}>
-          {item.name}
-        </Text>
-
-        <View style={styles.brandRow}>
-          {getBrandIcon(item.brand)}
-          <Text style={styles.brandText}>{item.brand}</Text>
-        </View>
-
-        <View style={styles.priceRow}>
-          <Text style={styles.priceText}>
-            ${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}
-          </Text>
+        {/* Badges Container */}
+        <View style={styles.badgeContainer}>
+          {/* Waterproof Badge if applicable */}
+          {item.isWaterproof && (
+            <View style={styles.waterproofBadge}>
+              <Icon name="water" size={12} color={COLORS.white} />
+              <Text style={styles.badgeText}>WP</Text>
+            </View>
+          )}
           
-          {parseInt(item.stock) === 0 && (
-            <Text style={styles.outOfStockText}>Out of stock</Text>
+          {/* Category Badge */}
+          {item.category && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{item.category}</Text>
+            </View>
           )}
         </View>
       </View>
 
-      {/* Category Tag */}
-      <View style={styles.categoryTag}>
-        <Text style={styles.categoryText}>
-          {item.category}
+      {/* Product Info */}
+      <View style={styles.productInfo}>
+        {/* Brand Row */}
+        <View style={styles.brandRow}>
+          {getBrandIcon(item.brand)}
+          <Text style={styles.brandText}>{item.brand || 'Unknown'}</Text>
+        </View>
+        
+        {/* Product Name */}
+        <Text style={styles.productName} numberOfLines={1}>
+          {item.name || 'Unnamed Product'}
         </Text>
+
+        {/* Bottom Row */}
+        <View style={styles.bottomRow}>
+          {/* Price */}
+          <Text style={styles.priceText}>
+            ${typeof item.price === 'number' ? item.price.toFixed(2) : (item.price || 'N/A')}
+          </Text>
+          
+          {/* Cart Button (Replacing In Stock) */}
+          <TouchableOpacity style={styles.cartIconButton}>
+            <Icon name="cart-plus" size={18} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
 
+  const renderHeaderRight = () => (
+    <View style={styles.headerIcons}>
+      <TouchableOpacity style={styles.iconButton}>
+        <Ionicons name="search-outline" size={24} color={COLORS.white} />
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={styles.iconButton}
+        onPress={() => navigation.navigate('Product')}
+      >
+        <MaterialIcons name="dashboard" size={22} color={COLORS.white} />
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={styles.cartButton}>
+        <Icon name="cart-outline" size={24} color={COLORS.white} />
+        <View style={styles.cartBadge}>
+          <Text style={styles.cartBadgeText}>3</Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderCategoryFilter = () => (
+    <View style={styles.categoryFilterContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryFilterContent}>
+        <TouchableOpacity style={[styles.categoryFilterItem, styles.categoryFilterItemActive]}>
+          <Icon name="star" size={18} color={COLORS.white} />
+          <Text style={styles.categoryFilterTextActive}>All</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.categoryFilterItem}>
+          <Icon name="shoe-sneaker" size={18} color={COLORS.primary} />
+          <Text style={styles.categoryFilterText}>Sneakers</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.categoryFilterItem}>
+          <Ionicons name="football" size={18} color={COLORS.primary} />
+          <Text style={styles.categoryFilterText}>Sport</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.categoryFilterItem}>
+          <Icon name="shoe-formal" size={18} color={COLORS.primary} />
+          <Text style={styles.categoryFilterText}>Formal</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.categoryFilterItem}>
+          <Icon name="hiking" size={18} color={COLORS.primary} />
+          <Text style={styles.categoryFilterText}>Outdoor</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.categoryFilterItem}>
+          <Ionicons name="water" size={18} color={COLORS.primary} />
+          <Text style={styles.categoryFilterText}>Waterproof</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>SHOESHABLE</Text>
-        <Text style={styles.headerSubtitle}>sapatos</Text>
-        
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ProductScreen')}>
-            <Icon name="view-dashboard" size={24} color={COLORS.navy} />
-            <Text style={styles.iconText}>Admin</Text>
-          </TouchableOpacity>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      
+      {/* Animated Header */}
+      <Animated.View style={[styles.header, { height: headerHeight }]}>
+        <View style={styles.headerContent}>
+          <View style={styles.titleContainer}>
+            <Animated.Text style={[styles.headerTitle, { fontSize: headerTitleSize }]}>
+              SHOESHABLE
+            </Animated.Text>
+            <Animated.Text style={[styles.headerSubtitle, { opacity: headerSubtitleOpacity }]}>
+              Premium Footwear Collection
+            </Animated.Text>
+          </View>
           
-          <TouchableOpacity style={styles.iconButton}>
-            <Icon name="cart-outline" size={24} color={COLORS.navy} />
-            <Text style={styles.iconText}>Cart</Text>
-          </TouchableOpacity>
+          {renderHeaderRight()}
         </View>
-      </View>
+      </Animated.View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading shoes...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={products}
-          renderItem={renderProductCard}
-          keyExtractor={(item) => item._id.toString()}
-          numColumns={2}
-          contentContainerStyle={styles.productGrid}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={fetchProducts}
-              colors={[COLORS.primary]}
-              tintColor={COLORS.primary}
+      {/* Main Content */}
+      <View style={styles.mainContent}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Discovering your perfect fit...</Text>
+          </View>
+        ) : (
+          <>
+            {/* Category Filter */}
+            {renderCategoryFilter()}
+            
+            {/* Product List */}
+            <Animated.FlatList
+              data={products}
+              renderItem={renderProductCard}
+              keyExtractor={(item) => item._id.toString()}
+              numColumns={2}
+              contentContainerStyle={styles.productGrid}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={fetchProducts}
+                  colors={[COLORS.primary]}
+                  tintColor={COLORS.primary}
+                />
+              }
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                { useNativeDriver: false }
+              )}
+              scrollEventThrottle={16}
+              ListHeaderComponent={
+                <View style={styles.listHeader}>
+                  <View style={styles.headerTextContainer}>
+                    <Text style={styles.sectionTitle}>Featured Collection</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      Discover the perfect fit for your lifestyle
+                    </Text>
+                  </View>
+                  <TouchableOpacity style={styles.viewAllButton}>
+                    <Text style={styles.viewAllText}>View All</Text>
+                    <MaterialIcons name="arrow-forward-ios" size={14} color={COLORS.primary} />
+                  </TouchableOpacity>
+                </View>
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Icon name="shoe-sneaker" size={80} color={COLORS.primaryLight} />
+                  <Text style={styles.emptyTitle}>No Products Found</Text>
+                  <Text style={styles.emptyText}>
+                    We couldn't find any products that match your criteria
+                  </Text>
+                  <TouchableOpacity style={styles.refreshButton} onPress={fetchProducts}>
+                    <Ionicons name="refresh" size={16} color={COLORS.white} />
+                    <Text style={styles.refreshButtonText}>Refresh</Text>
+                  </TouchableOpacity>
+                </View>
+              }
             />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Icon name="shoe-sneaker" size={80} color={COLORS.primaryLight} />
-              <Text style={styles.emptyText}>No shoes available</Text>
-            </View>
-          }
-        />
-      )}
+          </>
+        )}
+      </View>
+      
+      {/* Bottom Navigator */}
+      <View style={styles.bottomNavContainer}>
+        <BottomNavigator navigation={navigation} activeScreen="Home" />
+      </View>
     </View>
   );
 };
@@ -197,94 +355,234 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.light,
   },
+  mainContent: {
+    flex: 1,
+  },
   header: {
+    backgroundColor: COLORS.primary,
+    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingBottom: 15,
     paddingHorizontal: 16,
+    justifyContent: 'flex-end',
+    elevation: 8,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    zIndex: 10,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  titleContainer: {
+    flexDirection: 'column',
+  },
+  headerTitle: {
+    fontWeight: '800',
+    color: COLORS.white,
+    letterSpacing: 2,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: COLORS.lightDark,
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  cartButton: {
+    padding: 8,
+    marginLeft: 8,
+    position: 'relative',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: COLORS.danger,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.white,
+  },
+  cartBadgeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  categoryFilterContainer: {
     paddingVertical: 12,
+    paddingHorizontal: 10,
     backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.grey,
     elevation: 2,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+    zIndex: 5,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.navy,
-    textAlign: 'center',
-    letterSpacing: 3,
+  categoryFilterContent: {
+    paddingHorizontal: 10,
   },
-  headerSubtitle: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    textAlign: 'center',
-    letterSpacing: 2,
-    marginBottom: 10,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  iconButton: {
+  categoryFilterItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 10,
+    borderRadius: 20,
+    backgroundColor: COLORS.light,
   },
-  iconText: {
-    fontSize: 14,
-    color: COLORS.navy,
-    marginLeft: 4,
+  categoryFilterItemActive: {
+    backgroundColor: COLORS.primary,
+  },
+  categoryFilterText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  categoryFilterTextActive: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: COLORS.white,
+    fontWeight: '600',
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.primary,
+    letterSpacing: 0.5,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: COLORS.primaryLight,
+    marginTop: 4,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.light,
+    borderRadius: 16,
+  },
+  viewAllText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '600',
+    marginRight: 4,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.light,
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 16,
     fontSize: 16,
-    color: COLORS.textLight,
+    color: COLORS.primary,
+    fontWeight: '500',
   },
   productGrid: {
-    padding: 12,
-    paddingBottom: 24,
+    padding: 10,
+    paddingBottom: 100, // Added extra padding for bottom navigator
   },
   productCard: {
     width: cardWidth,
     backgroundColor: COLORS.white,
-    borderRadius: 12,
-    margin: 6,
+    borderRadius: 20,
+    margin: 8,
     overflow: 'hidden',
-    elevation: 3,
+    elevation: 4,
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
     position: 'relative',
+    marginBottom: 16,
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 220, // Increased from 180 to 220
   },
   productImage: {
     width: '100%',
-    height: 160,
+    height: '100%',
     backgroundColor: COLORS.light,
+  },
+  imageGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
   },
   imagePlaceholder: {
     width: '100%',
-    height: 160,
+    height: '100%',
     backgroundColor: COLORS.light,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  productInfo: {
-    padding: 12,
+  badgeContainer: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'column',
   },
-  productName: {
-    fontSize: 14,
+  waterproofBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  badgeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: '700',
+    marginLeft: 4,
+  },
+  categoryBadge: {
+    backgroundColor: COLORS.primaryTransparent,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  categoryText: {
+    color: COLORS.white,
+    fontSize: 10,
     fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  productInfo: {
+    padding: 14,
   },
   brandRow: {
     flexDirection: 'row',
@@ -293,61 +591,87 @@ const styles = StyleSheet.create({
   },
   brandText: {
     fontSize: 12,
-    color: COLORS.textLight,
-    marginLeft: 4,
+    color: COLORS.primaryLight,
+    marginLeft: 6,
     textTransform: 'capitalize',
+    fontWeight: '500',
   },
-  priceRow: {
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: 10,
+  },
+  bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   priceText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: COLORS.primary,
   },
-  outOfStockText: {
-    fontSize: 10,
-    color: COLORS.danger,
-    fontWeight: '500',
-  },
-  waterproofBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+  cartIconButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  categoryTag: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(0,31,63,0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  categoryText: {
-    color: COLORS.white,
-    fontSize: 10,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    elevation: 3,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   emptyContainer: {
-    padding: 40,
+    padding: 60,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.textLight,
-    marginTop: 12,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginTop: 16,
+    marginBottom: 8,
   },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.primaryLight,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  refreshButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  bottomNavContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.white,
+    elevation: 12,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.light,
+    zIndex: 1000,
+  }
 });
 
 export default Home;
