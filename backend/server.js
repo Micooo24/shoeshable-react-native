@@ -37,7 +37,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // Use the user routes
-app.use("/api", productRoutes);
+app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 
 app.use((req, res, next) => {

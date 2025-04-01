@@ -1,4 +1,4 @@
-const ProductModule = require('../models/Products');
+const ProductModule = require('../models/Product');
 const { 
   Product, 
   SHOE_CATEGORIES, 
@@ -279,8 +279,6 @@ exports.remove = async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 };
-
-// Additional filter functions
 
 exports.getProductsByCategory = async (req, res) => {
   try {

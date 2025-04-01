@@ -45,9 +45,9 @@ const SHOE_BRANDS = {
 const GENDER_OPTIONS = ['men', 'women', 'unisex', 'kids'];
 
 const COMMON_COLORS = [
-  'Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 
-  'Brown', 'Gray', 'Purple', 'Pink', 'Orange', 'Beige', 
-  'Tan', 'Navy', 'Teal', 'Gold', 'Silver', 'Multicolor'
+  'black', 'white', 'red', 'blue', 'green', 'yellow', 
+  'brown', 'gray', 'purple', 'pink', 'orange', 'beige', 
+  'tan', 'navy', 'teal', 'gold', 'silver', 'multicolor'
 ];
 
 const COMMON_SIZES = [
