@@ -99,7 +99,6 @@ exports.getAllCartItems = async (req, res) => {
     }
   };
 
-
 // Update an item's quantity in the cart authenticated user
 exports.updateCartItemQuantity= async (req, res) => {
   const { productId, quantity } = req.body;
@@ -172,10 +171,8 @@ exports.updateCartItem = async (req, res) => {
     }
   };
 
-
-
 // Delete an item from the cart authenticated user
-exports.deleteFromCart = async (req, res) => {
+exports.deleteCartItem = async (req, res) => {
   const { productId } = req.body; // Only productId is needed in the request body
   const userId = req.user.id; // Use authenticated user's ID
 
@@ -193,81 +190,33 @@ exports.deleteFromCart = async (req, res) => {
   }
 };
 
+//Clear Cart Items
+exports.clearCart = async (req, res) => {
+  const userId = req.user.id; // Fetch user ID from the authenticated request
 
-// // Fetch all items in the cart collection
-// // Fetch all items in the cart for the authenticated user
-// exports.getAllCartItems = async (req, res) => {
-//   const userId = req.user.userId;  // Fetch userId from authenticated user
+  try {
+    // Delete all cart items for the authenticated user
+    const deletedItems = await Cart.deleteMany({ userId });
 
-//   try {
-//     // Find all cart items associated with the userId
-//     const cartItems = await Cart.find({ userId })
-//       .populate({
-//         path: 'productId', // Select specific fields from Product
-//         select: 'name description price stock image category brand', 
-//         populate: [
-//           {path : 'category', select: 'name'},
-//           {path: 'brand', select: 'name'}
-//         ]
-//       });
+    if (deletedItems.deletedCount === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No items found in cart to delete",
+      });
+    }
 
-//     if (cartItems.length === 0) {
-//       return res.status(200).json({ success: true, message: "No items found in cart", cartItems: [] });
-//     }
+    res.status(200).json({
+      success: true,
+      message: "All items removed from cart",
+      deletedCount: deletedItems.deletedCount,
+    });
+  } catch (error) {
+    console.error("Error clearing cart:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error clearing cart",
+      error: error.message,
+    });
+  }
+};
 
-//     res.status(200).json({ success: true, cartItems });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: "Error fetching cart items", error: error.message });
-//   }
-// };
-
-
-// // Update an item's quantity in the cart
-// exports.updateCartItemQuantity = async (req, res) => {
-//   const { productId, quantity } = req.body;
-//   const userId = req.user.userId;
-
-//   // Validate required fields
-//   if (!productId || quantity === undefined) {
-//     return res.status(400).json({ success: false, message: "Product ID and quantity are required" });
-//   }
-
-//   try {
-//     // Find the cart item for the given user and product
-//     const cartItem = await Cart.findOne({ userId, productId });
-
-//     if (!cartItem) {
-//       return res.status(404).json({ success: false, message: "Item not found in cart" });
-//     }
-
-//     // Update the item's quantity
-//     cartItem.quantity = quantity;
-//     await cartItem.save();
-
-//     res.status(200).json({ success: true, message: "Item quantity updated", cartItem });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: "Error updating item quantity", error: error.message });
-//   }
-// };
-
-
-// // Get all cart items for a specific user
-// exports.getCartByUserId = async (req, res) => {
-//   const { userId } = req.params;
-
-//   try {
-//     const cartItems = await Cart.find({ userId }).populate('productId');
-
-//     // Return success with empty list if no items are found
-//     return res.status(200).json({
-//       success: true,
-//       cartItems
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: "Error fetching cart items for user",
-//       error: error.message
-//     });
-//   }
-// };
