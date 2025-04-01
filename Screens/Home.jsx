@@ -71,7 +71,7 @@ const Home = ({ navigation }) => {
     
     switch (brand.toLowerCase()) {
       case 'nike':
-        return <Icon name="check-bold" size={14} color={COLORS.primary} />; // Using check icon instead of nike
+        return <Icon name="check-bold" size={14} color={COLORS.primary} />;
       case 'adidas':
         return <Icon name="podium" size={14} color={COLORS.primary} />; // Using podium instead of stripe-s
       case 'jordan':
@@ -161,7 +161,7 @@ const Home = ({ navigation }) => {
         <View style={styles.bottomRow}>
           {/* Price */}
           <Text style={styles.priceText}>
-            ${typeof item.price === 'number' ? item.price.toFixed(2) : (item.price || 'N/A')}
+            ₱{typeof item.price === 'number' ? item.price.toFixed(2) : (item.price || 'N/A')}
           </Text>
           
           {/* Cart Button (Replacing In Stock) */}
@@ -221,11 +221,6 @@ const Home = ({ navigation }) => {
         <TouchableOpacity style={styles.categoryFilterItem}>
           <Icon name="hiking" size={18} color={COLORS.primary} />
           <Text style={styles.categoryFilterText}>Outdoor</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.categoryFilterItem}>
-          <Ionicons name="water" size={18} color={COLORS.primary} />
-          <Text style={styles.categoryFilterText}>Waterproof</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

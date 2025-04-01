@@ -27,13 +27,14 @@ import {
 } from '../../Redux/actions/productActions';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { 
   MaterialIcons,
   Feather,
   MaterialCommunityIcons,
   FontAwesome5,
   FontAwesome,
-  Ionicons
+  Ionicons,
 } from '@expo/vector-icons';
 import { styles } from '../../Styles/product.js';
 import { COLORS } from '../../Theme/color.js';
@@ -403,9 +404,9 @@ const ProductScreen = () => {
     
     switch (brand) {
       case brandValues.find(b => b === 'nike'):
-        return <FontAwesome5 name="nike" size={16} color={COLORS.primary} />;
+        return <MaterialCommunityIcons name="check-bold" size={16} color={COLORS.primary} />;
       case brandValues.find(b => b === 'adidas'):
-        return <FontAwesome5 name="stripe-s" size={16} color={COLORS.primary} />;
+        return <Icon name="podium" size={14} color={COLORS.primary} />;;
       case brandValues.find(b => b === 'jordan'):
         return <MaterialCommunityIcons name="basketball" size={16} color={COLORS.primary} />;
       default:
@@ -737,7 +738,7 @@ const ProductScreen = () => {
                       <Text style={styles.requiredMark}>*</Text>
                     </View>
                     <View style={styles.inputContainer}>
-                      <MaterialIcons name="attach-money" size={20} color={COLORS.primary} style={styles.inputIcon} />
+                    <MaterialCommunityIcons name="currency-php" size={20} color={COLORS.primary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
                         placeholder="0.00"
