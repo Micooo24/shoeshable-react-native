@@ -1,26 +1,36 @@
-// Handle different possible export structures
 const ProductModule = require('../models/Products');
-const Product = ProductModule.Product; // If exported as { Product }
-const SHOE_CATEGORIES = ProductModule.SHOE_CATEGORIES;
-const SHOE_BRANDS = ProductModule.SHOE_BRANDS;
+const { 
+  Product, 
+  SHOE_CATEGORIES, 
+  SHOE_BRANDS, 
+  COMMON_SIZES, 
+  COMMON_COLORS, 
+  GENDER_OPTIONS 
+} = ProductModule;
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 
+exports.getEnumValues = async (req, res) => {
+  try {
+    res.status(200).json({
+      message: "Enum values fetched successfully",
+      data: {
+        categories: SHOE_CATEGORIES,
+        brands: SHOE_BRANDS,
+        sizes: COMMON_SIZES,
+        colors: COMMON_COLORS,
+        genders: GENDER_OPTIONS
+      }
+    });
+  } catch (err) {
+    console.error("Error in getEnumValues:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 exports.getAllProducts = async (req, res) => {
   try {
-    // Debug log to check what Product is
-    console.log("Product model type:", typeof Product);
-    console.log("Product model:", Product);
-    
-    // Check if Product is available and has find method
-    if (!Product) {
-      return res.status(500).json({ error: "Product model not found" });
-    }
-    
-    // Try to access the model directly if Product is an object with a model property
-    const ProductModel = typeof Product.model === 'function' ? Product.model('Product') : Product;
-    
-    const products = await ProductModel.find({});
+    const products = await Product.find({});
     res.status(200).json({
       message: "Products fetched successfully",
       products,
@@ -51,13 +61,31 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: "All required fields must be provided" });
     }
 
-    // Validate category and brand against enums
+    // Validate category against enum
     if (!Object.values(SHOE_CATEGORIES).includes(category)) {
       return res.status(400).json({ error: "Invalid category" });
     }
 
+    // Validate brand against enum
     if (!Object.values(SHOE_BRANDS).includes(brand)) {
       return res.status(400).json({ error: "Invalid brand" });
+    }
+
+    // Validate gender against enum
+    if (!GENDER_OPTIONS.includes(gender)) {
+      return res.status(400).json({ error: "Invalid gender" });
+    }
+
+    // Parse and validate size
+    const sizeArray = Array.isArray(size) ? size : [size];
+    if (!sizeArray.every(s => COMMON_SIZES.includes(s))) {
+      return res.status(400).json({ error: "Invalid size" });
+    }
+
+    // Parse and validate color
+    const colorArray = Array.isArray(color) ? color : [color];
+    if (!colorArray.every(c => COMMON_COLORS.includes(c))) {
+      return res.status(400).json({ error: "Invalid color" });
     }
 
     let imageUrls = [];
@@ -81,8 +109,8 @@ exports.create = async (req, res) => {
       image: imageUrls,
       category,
       brand,
-      size: Array.isArray(size) ? size : [size],
-      color: Array.isArray(color) ? color : [color],
+      size: sizeArray,
+      color: colorArray,
       gender,
       material,
     });
@@ -159,13 +187,31 @@ exports.update = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Validate category and brand if provided
+    // Validate category if provided
     if (category && !Object.values(SHOE_CATEGORIES).includes(category)) {
       return res.status(400).json({ error: "Invalid category" });
     }
 
+    // Validate brand if provided
     if (brand && !Object.values(SHOE_BRANDS).includes(brand)) {
       return res.status(400).json({ error: "Invalid brand" });
+    }
+
+    // Validate gender if provided
+    if (gender && !GENDER_OPTIONS.includes(gender)) {
+      return res.status(400).json({ error: "Invalid gender" });
+    }
+
+    // Validate size if provided
+    const sizeArray = size ? (Array.isArray(size) ? size : [size]) : null;
+    if (sizeArray && !sizeArray.every(s => COMMON_SIZES.includes(s))) {
+      return res.status(400).json({ error: "Invalid size" });
+    }
+
+    // Validate color if provided
+    const colorArray = color ? (Array.isArray(color) ? color : [color]) : null;
+    if (colorArray && !colorArray.every(c => COMMON_COLORS.includes(c))) {
+      return res.status(400).json({ error: "Invalid color" });
     }
 
     let updatedImageUrls = [];
@@ -198,8 +244,8 @@ exports.update = async (req, res) => {
     if (stock) product.stock = stock;
     if (category) product.category = category;
     if (brand) product.brand = brand;
-    if (size) product.size = Array.isArray(size) ? size : [size];
-    if (color) product.color = Array.isArray(color) ? color : [color];
+    if (sizeArray) product.size = sizeArray;
+    if (colorArray) product.color = colorArray;
     if (gender) product.gender = gender;
     if (material !== undefined) product.material = material;
     product.image = updatedImageUrls;
@@ -301,12 +347,41 @@ exports.searchProducts = async (req, res) => {
       ];
     }
     
-    // Filters
-    if (category) searchCriteria.category = category;
-    if (brand) searchCriteria.brand = brand;
-    if (gender) searchCriteria.gender = gender;
-    if (size) searchCriteria.size = size;
-    if (color) searchCriteria.color = { $regex: color, $options: 'i' };
+    // Filters - validate all inputs
+    if (category) {
+      if (!Object.values(SHOE_CATEGORIES).includes(category)) {
+        return res.status(400).json({ error: "Invalid category" });
+      }
+      searchCriteria.category = category;
+    }
+    
+    if (brand) {
+      if (!Object.values(SHOE_BRANDS).includes(brand)) {
+        return res.status(400).json({ error: "Invalid brand" });
+      }
+      searchCriteria.brand = brand;
+    }
+    
+    if (gender) {
+      if (!GENDER_OPTIONS.includes(gender)) {
+        return res.status(400).json({ error: "Invalid gender" });
+      }
+      searchCriteria.gender = gender;
+    }
+    
+    if (size) {
+      if (!COMMON_SIZES.includes(size)) {
+        return res.status(400).json({ error: "Invalid size" });
+      }
+      searchCriteria.size = size;
+    }
+    
+    if (color) {
+      if (!COMMON_COLORS.map(c => c.toLowerCase()).includes(color.toLowerCase())) {
+        return res.status(400).json({ error: "Invalid color" });
+      }
+      searchCriteria.color = { $regex: new RegExp(color, 'i') };
+    }
     
     // Price range
     if (minPrice !== undefined || maxPrice !== undefined) {
@@ -325,5 +400,33 @@ exports.searchProducts = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Add a new method to update stock
+exports.updateProductStock = async (req, res) => {
+  const { id } = req.params;
+  const { quantity } = req.body;
+  
+  try {
+    const product = await Product.findById(id);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    try {
+      await product.updateStock(quantity);
+      
+      res.status(200).json({
+        message: 'Product stock updated successfully',
+        product,
+      });
+    } catch (stockError) {
+      return res.status(400).json({ error: stockError.message });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
   }
 };

@@ -5,12 +5,13 @@ const multer = require('multer');
 
 
 const upload = multer({ dest: 'uploads/' });
-const { create, getAllProducts, getProductBySlug, getProductById, update, remove} = require('../controllers/ProductController');
+const { create, getAllProducts, getProductBySlug, getProductById, update, remove, getEnumValues} = require('../controllers/ProductController');
 
 
 router.post('/add-product', upload.array('image', 5), create);
 router.put('/update-product/:id', upload.array('image', 5), update);
 
+router.get('/enums', getEnumValues)
 router.get('/get-products', getAllProducts);
 router.get('/get-product/:slug', getProductBySlug);
 router.get('/get-product/:id', getProductById);
