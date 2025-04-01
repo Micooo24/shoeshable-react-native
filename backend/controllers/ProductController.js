@@ -1,5 +1,5 @@
 // Handle different possible export structures
-const ProductModule = require('../models/Products');
+const ProductModule = require('../models/Product');
 const Product = ProductModule.Product; // If exported as { Product }
 const SHOE_CATEGORIES = ProductModule.SHOE_CATEGORIES;
 const SHOE_BRANDS = ProductModule.SHOE_BRANDS;

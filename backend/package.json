@@ -25,6 +25,9 @@
     "firebase-admin": "^13.2.0",
     "google-auth-library": "^9.15.1",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "expo": "~52.0.42",
+    "react": "18.3.1",
+    "react-native": "0.76.8"
   }
 }

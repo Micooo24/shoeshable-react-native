@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 // const admin = require("../firebase_backend/firebaseAdmin"); // Import Firebase Admin
 const { OAuth2Client } = require('google-auth-library'); // Import Google Auth Library
-const client = new OAuth2Client('80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com'); // Replace with your webClientId
+const client = new OAuth2Client('80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com'); 
 
 
 
