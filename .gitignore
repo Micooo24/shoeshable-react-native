@@ -37,3 +37,6 @@ yarn-error.*
 
 # android build 
 android/
+
+#vscode color
+.vscode

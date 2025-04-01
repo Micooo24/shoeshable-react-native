@@ -7,8 +7,11 @@ require('dotenv').config();
 
 // App
 const app = express();
-const productRoutes = require('./routes/product');
+
+//Routes
+const productRoutes = require('./routes/products');
 const authRoutes = require("./routes/auth");
+const cartRoutes = require('./routes/carts');  
 
 // Mongoose
 mongoose
@@ -39,6 +42,8 @@ app.use(express.json());
 // Use the user routes
 app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
+
+app.use("/api/cart", cartRoutes); // Use the cart routes
 
 app.use((req, res, next) => {
     res.status(404).json({ message: 'Route not found' });
