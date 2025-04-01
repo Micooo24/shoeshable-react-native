@@ -1,7 +1,7 @@
 const Cart = require("../models/Cart");
-// const Product = require("../models/Product"); // Import the Product model
 
-// Add an item to the cart
+
+// Add an item to the cart of authenticated user
 exports.addToCart = async (req, res) => {
     const { productId, quantity = 1, brand, category, size, color, gender } = req.body;
     const userId = req.user.id; // Fetch user ID from the authenticated request
@@ -65,7 +65,6 @@ exports.addToCart = async (req, res) => {
     }
   };
 
-// Fetch all items in the cart collection
 // Fetch all items in the cart for the authenticated user
 exports.getAllCartItems = async (req, res) => {
     const userId = req.user.id; // Fetch userId from the authenticated user
@@ -100,24 +99,99 @@ exports.getAllCartItems = async (req, res) => {
     }
   };
 
-// // Delete an item from the cart
-// exports.deleteFromCart = async (req, res) => {
-//   const { productId } = req.body; // Only productId is needed in the request body
-//   const userId = req.user.userId; // Use authenticated user's ID
 
-//   try {
-//     // Find the cart item and remove it based on authenticated user's ID
-//     const deletedItem = await Cart.findOneAndDelete({ userId, productId });
+// Update an item's quantity in the cart authenticated user
+exports.updateCartItemQuantity= async (req, res) => {
+  const { productId, quantity } = req.body;
+  const userId = req.user.id
 
-//     if (!deletedItem) {
-//       return res.status(404).json({ success: false, message: "Item not found in cart" });
-//     }
+  // Validate required fields
+  if (!productId || quantity === undefined) {
+    return res.status(400).json({ success: false, message: "Product ID and quantity are required" });
+  }
 
-//     res.status(200).json({ success: true, message: "Item deleted from cart", deletedItem });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: "Error deleting item from cart", error });
-//   }
-// };
+  try {
+    // Find the cart item for the given user and product
+    const cartItem = await Cart.findOne({ userId, productId });
+
+    if (!cartItem) {
+      return res.status(404).json({ success: false, message: "Item not found in cart" });
+    }
+
+    // Update the item's quantity
+    cartItem.quantity = quantity;
+    await cartItem.save();
+
+    res.status(200).json({ success: true, message: "Item quantity updated", cartItem });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error updating item quantity", error: error.message });
+  }
+};
+
+//Update Cart Item Size and Color
+exports.updateCartItem = async (req, res) => {
+    const { productId, size, color } = req.body;
+    const userId = req.user.id; // Fetch user ID from the authenticated request
+  
+    // Validate required fields
+    if (!productId || !size || !color) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID, size, and color are required",
+      });
+    }
+  
+    try {
+      // Find the cart item for the given user and product
+      const cartItem = await Cart.findOne({ userId, productId });
+  
+      if (!cartItem) {
+        return res.status(404).json({
+          success: false,
+          message: "Item not found in cart",
+        });
+      }
+  
+      // Update the size and color fields
+      cartItem.size = size;
+      cartItem.color = color;
+      await cartItem.save();
+  
+      res.status(200).json({
+        success: true,
+        message: "Cart item updated successfully",
+        cartItem,
+      });
+    } catch (error) {
+      console.error("Error updating cart item:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update cart item",
+        error: error.message,
+      });
+    }
+  };
+
+
+
+// Delete an item from the cart authenticated user
+exports.deleteFromCart = async (req, res) => {
+  const { productId } = req.body; // Only productId is needed in the request body
+  const userId = req.user.id; // Use authenticated user's ID
+
+  try {
+    // Find the cart item and remove it based on authenticated user's ID
+    const deletedItem = await Cart.findOneAndDelete({ userId, productId });
+
+    if (!deletedItem) {
+      return res.status(404).json({ success: false, message: "Item not found in cart" });
+    }
+
+    res.status(200).json({ success: true, message: "Item deleted from cart", deletedItem });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error deleting item from cart", error });
+  }
+};
 
 
 // // Fetch all items in the cart collection

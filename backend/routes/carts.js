@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-// const { addToCart, deleteFromCart, getAllCartItems, updateCartItemQuantity, getCartByCustomerId} = require('../controllers/CartController');
-const { addToCart, getAllCartItems} = require('../controllers/CartController');
+const { addToCart, getAllCartItems, updateCartItem, updateCartItemQuantity, deleteFromCart} = require('../controllers/CartController');
 const { isAuthenticatedUser } = require("../middlewares/auth");
 
 
@@ -9,16 +8,16 @@ const { isAuthenticatedUser } = require("../middlewares/auth");
 router.post("/add", isAuthenticatedUser, addToCart);
 
 //Get Cart
-router.get("/all", isAuthenticatedUser, getAllCartItems); // fetch all carts
+router.get("/all", isAuthenticatedUser, getAllCartItems);
 
+//Update Cart Item
+router.put("/update", isAuthenticatedUser, updateCartItem); 
 
-// // Route to delete an item from the cart
-// router.delete("/delete",isAuthenticatedUser, deleteFromCart); // Using DELETE with request body for customerId and productId
+//Update Cart Item Quantity
+router.put("/update-quantity", isAuthenticatedUser, updateCartItemQuantity); 
 
-
-// router.get('/:customerId',getCartByCustomerId);
-
-// router.put("/update-quantity", isAuthenticatedUser, updateCartItemQuantity);
+//Delete Cart Item
+router.delete("/delete", isAuthenticatedUser, deleteFromCart); 
 
 
 module.exports = router;
