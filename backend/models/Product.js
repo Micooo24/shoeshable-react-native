@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
 
-// Define enums for shoe categories
 const SHOE_CATEGORIES = {
   ATHLETIC: 'athletic',
   RUNNING: 'running',
@@ -20,7 +19,6 @@ const SHOE_CATEGORIES = {
   SLIP_ONS: 'slip-ons'
 };
 
-// Define enums for shoe brands
 const SHOE_BRANDS = {
   NIKE: 'nike',
   ADIDAS: 'adidas',
@@ -43,6 +41,19 @@ const SHOE_BRANDS = {
   ON_RUNNING: 'on-running',
   SALOMON: 'salomon'
 };
+
+const GENDER_OPTIONS = ['men', 'women', 'unisex', 'kids'];
+
+const COMMON_COLORS = [
+  'black', 'white', 'red', 'blue', 'green', 'yellow', 
+  'brown', 'gray', 'purple', 'pink', 'orange', 'beige', 
+  'tan', 'navy', 'teal', 'gold', 'silver', 'multicolor'
+];
+
+const COMMON_SIZES = [
+  '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', 
+  '9.5', '10', '10.5', '11', '11.5', '12', '13', '14'
+];
 
 const productSchema = new mongoose.Schema({
   name: {
@@ -67,6 +78,7 @@ const productSchema = new mongoose.Schema({
     type: String,
     unique: true,
     lowercase: true,
+    index: true, // Explicit index for performance
   },
   image: [String],
   category: {
@@ -79,19 +91,20 @@ const productSchema = new mongoose.Schema({
     required: true,
     enum: Object.values(SHOE_BRANDS)
   },
-  // Additional shoe-specific fields
   size: {
-    type: [String], // Array of available sizes
-    required: true
+    type: [String], 
+    required: true,
+    enum: COMMON_SIZES 
   },
   color: {
-    type: [String], // Array of available colors
-    required: true
+    type: [String],
+    required: true,
+    enum: COMMON_COLORS 
   },
   gender: {
     type: String,
-    enum: ['men', 'women', 'unisex', 'kids'],
-    required: true
+    required: true,
+    enum: Object.values(GENDER_OPTIONS)
   },
   material: {
     type: String
@@ -106,8 +119,10 @@ productSchema.pre('save', function (next) {
   next();
 });
 
-// Add a method to update the stock
 productSchema.methods.updateStock = async function (quantity) {
+  if (quantity > this.stock) {
+    throw new Error('Not enough stock available');
+  }
   this.stock = this.stock - quantity;
   await this.save();
 };
@@ -117,5 +132,8 @@ const Product = mongoose.model('Product', productSchema);
 module.exports = {
   Product,
   SHOE_CATEGORIES,
-  SHOE_BRANDS
+  SHOE_BRANDS,
+  COMMON_SIZES,
+  COMMON_COLORS,
+  GENDER_OPTIONS
 };

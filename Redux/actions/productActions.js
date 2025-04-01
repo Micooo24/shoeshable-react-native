@@ -1,6 +1,35 @@
 import axios from 'axios';
-import { ADD_PRODUCT, UPDATE_PRODUCT, DELETE_PRODUCT, GET_PRODUCTS } from '../constants';
+import { ADD_PRODUCT, 
+  UPDATE_PRODUCT, 
+  DELETE_PRODUCT,
+  GET_PRODUCTS,
+  FETCH_ENUM_VALUES_FAILURE,
+  FETCH_ENUM_VALUES_REQUEST,
+  FETCH_ENUM_VALUES_SUCCESS } from '../constants';
 import baseURL from '../../assets/common/baseurl';
+
+export const fetchEnumValues = () => async (dispatch) => {
+  try {
+    dispatch({ type: FETCH_ENUM_VALUES_REQUEST });
+    
+    const response = await axios.get(`${baseURL}/api/products/enums`);
+    
+    dispatch({ 
+      type: FETCH_ENUM_VALUES_SUCCESS, 
+      payload: response.data.data 
+    });
+    
+    return response.data.data;
+  } catch (error) {
+    dispatch({ 
+      type: FETCH_ENUM_VALUES_FAILURE, 
+      payload: error.response && error.response.data.error 
+        ? error.response.data.error 
+        : error.message 
+    });
+    throw error;
+  }
+};
 
 export const getProducts = () => async (dispatch) => {
   try {
@@ -47,7 +76,6 @@ export const addProduct = (product) => async (dispatch) => {
     if (product.material) {
       formData.append('material', product.material);
     }
-    
 
     // Handle images
     if (Array.isArray(product.image)) {
