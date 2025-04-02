@@ -96,6 +96,76 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 10,
   },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+  },
+  modalContent: {
+    width: '90%',
+    padding: 20,
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+    color: COLORS.textDark,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 10,
+    color: COLORS.textDark,
+  },
+  modalImage: {
+    width: 100,
+    height: 100,
+    marginRight: 10,
+    borderRadius: 8,
+  },
+  imageList: {
+    marginBottom: 15,
+  },
+  dropdown: {
+    width: '100%',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: COLORS.textLight,
+    borderRadius: 5,
+    padding: 10,
+    backgroundColor: COLORS.light,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  button: {
+    flex: 1,
+    marginHorizontal: 5,
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  updateButton: {
+    backgroundColor: COLORS.primary,
+  },
+  cancelButton: {
+    backgroundColor: COLORS.danger,
+  },
+  buttonText: {
+    color: COLORS.white,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
   bottomNavContainer: {
     position: 'absolute',
     bottom: 0,

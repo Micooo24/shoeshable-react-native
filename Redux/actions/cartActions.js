@@ -10,6 +10,8 @@ import baseURL from '../../assets/common/baseurl';
 import axios from 'axios';
 import { getToken } from '../../utils/Auth';
 
+
+//Add Cart Actions with Authenticated User
 export const addToCart = (product) => {
     return async (dispatch) => {
         try {
@@ -66,7 +68,7 @@ export const addToCart = (product) => {
     };
 };
 
-// New getCarts action
+//Get Cart Actions with Authenticated User
 export const getCarts = () => {
     return async (dispatch) => {
         try {
@@ -109,6 +111,67 @@ export const getCarts = () => {
                 return {
                     success: false,
                     message: error.response.data.message || 'Failed to fetch cart items.',
+                };
+            }
+
+            // Handle unexpected errors
+            return {
+                success: false,
+                message: 'An unexpected error occurred. Please try again.',
+            };
+        }
+    };
+};
+
+
+// Update Cart Item Action
+export const updateCartItem = (productId, updatedFields) => {
+    return async (dispatch) => {
+        try {
+            // Get the token from the database
+            const tokenData = await getToken();
+            const authToken = tokenData?.authToken;
+
+            if (!authToken) {
+                console.error('No auth token found. User might not be logged in.');
+                return {
+                    success: false,
+                    message: 'Unauthorized. Please log in to update the cart.',
+                };
+            }
+
+            // Make the API request to update the cart item
+            const response = await axios.put(
+                `${baseURL}/api/cart/update`,
+                { productId, ...updatedFields }, // Send productId and updated fields (size, color)
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`, // Add the token to the Authorization header
+                    },
+                }
+            );
+
+            // Dispatch the action to update the Redux store
+            dispatch({
+                type: UPDATE_CART_ITEM,
+                payload: response.data.cartItem, // Assuming the API returns the updated cart item in response.data.cartItem
+            });
+
+            // Return the response for further handling
+            return {
+                success: true,
+                message: response.data.message || 'Cart item updated successfully.',
+                cartItem: response.data.cartItem,
+            };
+        } catch (error) {
+            console.error('Error updating cart item:', error);
+
+            // Handle specific error responses from the backend
+            if (error.response && error.response.data) {
+                return {
+                    success: false,
+                    message: error.response.data.message || 'Failed to update cart item.',
                 };
             }
 

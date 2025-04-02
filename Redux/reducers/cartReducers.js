@@ -1,9 +1,9 @@
 import {
     ADD_TO_CART,
     GET_CART,
+    UPDATE_CART_ITEM,
     // REMOVE_FROM_CART,
     // CLEAR_CART,
-    // UPDATE_CART_ITEM,
     // UPDATE_CART_QUANTITY,
 } from '../constants';
 
@@ -58,6 +58,21 @@ export const cartReducer = (state = initialState, action) => {
             };
         }
 
+        case UPDATE_CART_ITEM: {
+            const { productId, size, color } = action.payload;
+
+            // Update only the size and color of the specific cart item
+            const updatedCartItems = state.cartItems.map(item =>
+                item.productId === productId
+                    ? { ...item, size, color } // Update size and color
+                    : item
+            );
+
+            return {
+                ...state,
+                cartItems: updatedCartItems,
+            };
+        }
         // Uncomment and implement these cases as needed
         // case REMOVE_FROM_CART:
         //     return handleRemoveFromCart(state, action);
