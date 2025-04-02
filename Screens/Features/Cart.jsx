@@ -5,6 +5,8 @@ import { styles } from '../../Styles/cart';
 import { COLORS } from '../../Theme/color';
 import { useDispatch, useSelector } from 'react-redux'; // Import Redux hooks
 import { getCarts } from '../../Redux/actions/cartActions'; // Import the getCarts action
+import Icon from 'react-native-vector-icons/MaterialIcons'; // Import icons from MaterialIcons
+import { TouchableOpacity } from 'react-native'; 
 
 const CartScreen = ({ navigation, product }) => {
   const dispatch = useDispatch();
@@ -30,6 +32,8 @@ const CartScreen = ({ navigation, product }) => {
 
     fetchCartItems();
   }, [dispatch]);
+
+  
 
   const renderCartItem = ({ item }) => {
     return (
@@ -69,6 +73,36 @@ const CartScreen = ({ navigation, product }) => {
         <Text style={styles.cartItemPrice}>
           ₱{item.productId && item.productId.price ? (item.productId.price * item.quantity).toFixed(2) : 'N/A'}
         </Text>
+  
+        {/* Action Buttons */}
+        <View style={styles.cartItemActions}>
+          {/* Decrease Quantity */}
+          <TouchableOpacity onPress={() => console.log('Decrease quantity for:', item._id)}>
+          <Icon
+            name="remove-circle-outline"
+            size={24}
+            color={COLORS.primary}
+          />
+        </TouchableOpacity>
+        
+          {/* Increase Quantity */}
+          <TouchableOpacity onPress={() => console.log('Increase quantity for:', item._id)}>
+          <Icon
+            name="add-circle-outline"
+            size={24}
+            color={COLORS.primary}
+          />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => console.log('Delete item:', item._id)}>
+          {/* Delete Item */}
+          <Icon
+            name="delete-outline"
+            size={24}
+            color={COLORS.danger}
+          />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };

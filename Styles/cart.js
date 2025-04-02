@@ -91,6 +91,11 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textLight,
   },
+  cartItemActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
   bottomNavContainer: {
     position: 'absolute',
     bottom: 0,
