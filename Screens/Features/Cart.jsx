@@ -77,7 +77,7 @@ const CartScreen = ({ navigation, product }) => {
         {/* Action Buttons */}
         <View style={styles.cartItemActions}>
           {/* Decrease Quantity */}
-          <TouchableOpacity onPress={() => console.log('Decrease quantity for:', item._id)}>
+          <TouchableOpacity>
           <Icon
             name="remove-circle-outline"
             size={24}
@@ -86,7 +86,7 @@ const CartScreen = ({ navigation, product }) => {
         </TouchableOpacity>
         
           {/* Increase Quantity */}
-          <TouchableOpacity onPress={() => console.log('Increase quantity for:', item._id)}>
+          <TouchableOpacity>
           <Icon
             name="add-circle-outline"
             size={24}
@@ -94,7 +94,7 @@ const CartScreen = ({ navigation, product }) => {
           />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => console.log('Delete item:', item._id)}>
+          <TouchableOpacity>
           {/* Delete Item */}
           <Icon
             name="delete-outline"
