@@ -67,38 +67,36 @@ exports.addToCart = async (req, res) => {
 
 // Fetch all items in the cart for the authenticated user
 exports.getAllCartItems = async (req, res) => {
-    const userId = req.user.id; // Fetch userId from the authenticated user
-  
-    try {
-      // Find all cart items associated with the userId
-      const cartItems = await Cart.find(
-        { userId }, // Filter by userId
-        "productId quantity brand category size color gender" // Select specific fields
-      );
-  
-      if (cartItems.length === 0) {
-        return res.status(200).json({
-          success: true,
-          message: "No items found in cart",
-          cartItems: [],
-        });
-      }
-  
-      // Return the cart items with the specified fields
-      res.status(200).json({
+  const userId = req.user.id; // Fetch userId from the authenticated user
+
+  try {
+    // Find all cart items associated with the userId and populate product details
+    const cartItems = await Cart.find({ userId })
+      .populate('productId', 'name price image') 
+      .select('productId quantity brand category size color gender'); // Select specific fields
+
+    if (cartItems.length === 0) {
+      return res.status(200).json({
         success: true,
-        cartItems,
-      });
-    } catch (error) {
-      console.error("Error fetching cart items:", error);
-      res.status(500).json({
-        success: false,
-        message: "Error fetching cart items",
-        error: error.message,
+        message: "No items found in cart",
+        cartItems: [],
       });
     }
-  };
 
+    // Return the cart items with populated product names
+    res.status(200).json({
+      success: true,
+      cartItems,
+    });
+  } catch (error) {
+    console.error("Error fetching cart items:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching cart items",
+      error: error.message,
+    });
+  }
+};
 // Update an item's quantity in the cart authenticated user
 exports.updateCartItemQuantity= async (req, res) => {
   const { productId, quantity } = req.body;
