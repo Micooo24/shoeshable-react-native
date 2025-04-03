@@ -10,16 +10,19 @@ import {
   RefreshControl,
   StatusBar,
   Animated,
-  ScrollView
+  ScrollView,
+  TextInput
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { getProducts } from './../Redux/actions/productActions';
+import { getProducts, searchProducts } from './../Redux/actions/productActions';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { MaterialIcons, Ionicons, Feather, AntDesign } from '@expo/vector-icons';
 import BottomNavigator from '../Navigators/BottomNavigator';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../Theme/color.js';
 import { styles } from '../Styles/home.js';
+import { debounce } from 'lodash'; // Make sure to import lodash
+import { getBrandIcon, getCategoryIcon, getGenderIcon } from '../Utils/Icons/ProductIcons';
 
 const Home = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -27,28 +30,21 @@ const Home = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [scrollY] = useState(new Animated.Value(0));
-  
-  // Header animation values
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [120, 80],
-    extrapolate: 'clamp',
-  });
-  
-  const headerTitleSize = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [28, 22],
-    extrapolate: 'clamp',
-  });
-  
-  const headerSubtitleOpacity = scrollY.interpolate({
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(3);
+
+  const searchBarOpacity = scrollY.interpolate({
     inputRange: [0, 60],
-    outputRange: [1, 0],
+    outputRange: [1, 0.95],
     extrapolate: 'clamp',
   });
 
   const fetchProducts = useCallback(() => {
     setRefreshing(true);
+    setIsSearching(false);
+    setSearchQuery('');
     dispatch(getProducts())
       .then(() => {
         setRefreshing(false);
@@ -60,39 +56,59 @@ const Home = ({ navigation }) => {
       });
   }, [dispatch]);
 
+  const handleSearch = useCallback(
+    debounce((query) => {
+      if (query.trim() === '') {
+        fetchProducts();
+        return;
+      }
+      
+      setIsSearching(true);
+      setLoading(true);
+      
+      dispatch(searchProducts({ query }))
+        .then(() => {
+          setLoading(false);
+        })
+        .catch(() => {
+          setLoading(false);
+        });
+    }, 500),
+    [dispatch, fetchProducts]
+  );
+
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  const getBrandIcon = (brand) => {
-    if (!brand) {
-      return <Icon name="tag-outline" size={14} color={COLORS.primary} />;
-    }
-    
-    switch (brand.toLowerCase()) {
-      case 'nike':
-        return <Icon name="check-bold" size={14} color={COLORS.primary} />;
-      case 'adidas':
-        return <Icon name="podium" size={14} color={COLORS.primary} />; // Using podium instead of stripe-s
-      case 'jordan':
-        return <Icon name="basketball" size={14} color={COLORS.primary} />;
-      case 'puma':
-        return <Icon name="cat" size={14} color={COLORS.primary} />;
-      case 'reebok':
-        return <Icon name="delta" size={14} color={COLORS.primary} />;
-      case 'converse':
-        return <Icon name="star" size={14} color={COLORS.primary} />;
-      case 'vans':
-        return <Icon name="alpha-v" size={14} color={COLORS.primary} />; // Changed to alpha-v from MaterialCommunityIcons
-      case 'asics':
-        return <Icon name="run-fast" size={14} color={COLORS.primary} />;
-      default:
-        return <Icon name="tag-outline" size={14} color={COLORS.primary} />;
-    }
-  };
+  useEffect(() => {
+    handleSearch(searchQuery);
+  }, [searchQuery, handleSearch]);
 
   const handleProductPress = (product) => {
-    navigation.navigate('SingleProduct', { product });
+    navigation.navigate('SingleProduct', { 
+      slug: product.slug || product._id, 
+      previewData: {
+        name: product.name,
+        price: product.price,
+        description: product.description,
+        brand: product.brand,
+        category: product.category,
+        size: product.size && Array.isArray(product.size) ? product.size : [],
+        color: product.color && Array.isArray(product.color) ? product.color : [],
+        image: product.image && Array.isArray(product.image) ? product.image : [],
+        stock: product.stock
+      }
+    });
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+  };
+
+  // Handle notification press
+  const handleNotificationPress = () => {
+    setNotificationCount(0);
   };
 
   const renderProductCard = ({ item }) => (
@@ -163,8 +179,6 @@ const Home = ({ navigation }) => {
           <Text style={styles.priceText}>
             ₱{typeof item.price === 'number' ? item.price.toFixed(2) : (item.price || 'N/A')}
           </Text>
-          
-          {/* Cart Button (Replacing In Stock) */}
           <TouchableOpacity style={styles.cartIconButton}>
             <Icon name="cart-plus" size={18} color={COLORS.white} />
           </TouchableOpacity>
@@ -173,92 +187,124 @@ const Home = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const renderHeaderRight = () => (
-    <View style={styles.headerIcons}>
-      <TouchableOpacity style={styles.iconButton}>
-        <Ionicons name="search-outline" size={24} color={COLORS.white} />
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.iconButton}
-        onPress={() => navigation.navigate('Product')}
-      >
-        <MaterialIcons name="dashboard" size={22} color={COLORS.white} />
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.cartButton}>
-        <Icon name="cart-outline" size={24} color={COLORS.white} />
-        <View style={styles.cartBadge}>
-          <Text style={styles.cartBadgeText}>3</Text>
-        </View>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderCategoryFilter = () => (
-    <View style={styles.categoryFilterContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryFilterContent}>
-        <TouchableOpacity style={[styles.categoryFilterItem, styles.categoryFilterItemActive]}>
-          <Icon name="star" size={18} color={COLORS.white} />
-          <Text style={styles.categoryFilterTextActive}>All</Text>
-        </TouchableOpacity>
+  const renderSearchBar = () => (
+    <Animated.View 
+      style={[
+        styles.searchBarContainer,
+        {
+          opacity: searchBarOpacity,
+          transform: [{ 
+            translateY: scrollY.interpolate({
+              inputRange: [0, 50],
+              outputRange: [0, -5],
+              extrapolate: 'clamp',
+            })
+          }]
+        }
+      ]}
+    >
+      <View style={styles.searchBarWrapper}>
+        <Animated.View 
+          style={[
+            styles.searchInputContainer,
+            {
+              flex: 1,
+              marginRight: 12,
+              transform: [{ 
+                scale: scrollY.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: [1, 0.98],
+                  extrapolate: 'clamp',
+                })
+              }]
+            }
+          ]}
+        >
+          <Feather 
+            name="search" 
+            size={22} 
+            color={searchFocused ? COLORS.primary : '#7f8c8d'} 
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for shoes, brands, categories..."
+            placeholderTextColor="#95a5a6"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            returnKeyType="search"
+            clearButtonMode="always"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity 
+              style={styles.clearButton} 
+              onPress={handleClearSearch}
+              activeOpacity={0.7}
+            >
+              <AntDesign name="close" size={16} color="#7f8c8d" />
+            </TouchableOpacity>
+          )}
+        </Animated.View>
         
-        <TouchableOpacity style={styles.categoryFilterItem}>
-          <Icon name="shoe-sneaker" size={18} color={COLORS.primary} />
-          <Text style={styles.categoryFilterText}>Sneakers</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.categoryFilterItem}>
-          <Ionicons name="football" size={18} color={COLORS.primary} />
-          <Text style={styles.categoryFilterText}>Sport</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.categoryFilterItem}>
-          <Icon name="shoe-formal" size={18} color={COLORS.primary} />
-          <Text style={styles.categoryFilterText}>Formal</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.categoryFilterItem}>
-          <Icon name="hiking" size={18} color={COLORS.primary} />
-          <Text style={styles.categoryFilterText}>Outdoor</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+        {/* Notification Icon */}
+        <Animated.View 
+          style={[
+            styles.notificationContainer,
+            {
+              transform: [{ 
+                scale: scrollY.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: [1, 0.98],
+                  extrapolate: 'clamp',
+                })
+              }]
+            }
+          ]}
+        >
+          <TouchableOpacity 
+            style={styles.notificationButton}
+            onPress={handleNotificationPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="notifications" 
+              size={24} 
+              color={COLORS.primary} 
+            />
+            {notificationCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    </Animated.View>
   );
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       
-      {/* Animated Header */}
-      <Animated.View style={[styles.header, { height: headerHeight }]}>
-        <View style={styles.headerContent}>
-          <View style={styles.titleContainer}>
-            <Animated.Text style={[styles.headerTitle, { fontSize: headerTitleSize }]}>
-              SHOESHABLE
-            </Animated.Text>
-            <Animated.Text style={[styles.headerSubtitle, { opacity: headerSubtitleOpacity }]}>
-              Premium Footwear Collection
-            </Animated.Text>
-          </View>
-          
-          {renderHeaderRight()}
-        </View>
-      </Animated.View>
-
-      {/* Main Content */}
-      <View style={styles.mainContent}>
+      {/* Search Bar */}
+      {renderSearchBar()}
+      
+      <View style={[styles.mainContent, { paddingTop: 60 }]}>
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Discovering your perfect fit...</Text>
+            <Text style={styles.loadingText}>
+              {isSearching ? 'Searching products...' : 'Discovering your perfect fit...'}
+            </Text>
           </View>
         ) : (
           <>
-            {/* Category Filter */}
-            {renderCategoryFilter()}
-            
-            {/* Product List */}
             <Animated.FlatList
               data={products}
               renderItem={renderProductCard}
@@ -282,28 +328,50 @@ const Home = ({ navigation }) => {
               ListHeaderComponent={
                 <View style={styles.listHeader}>
                   <View style={styles.headerTextContainer}>
-                    <Text style={styles.sectionTitle}>Featured Collection</Text>
+                    <Text style={styles.sectionTitle}>
+                      {isSearching ? 'Search Results' : 'Featured Collection'}
+                    </Text>
                     <Text style={styles.sectionSubtitle}>
-                      Discover the perfect fit for your lifestyle
+                      {isSearching 
+                        ? `Found ${products.length} product${products.length !== 1 ? 's' : ''}`
+                        : 'Discover the perfect fit for your lifestyle'
+                      }
                     </Text>
                   </View>
-                  <TouchableOpacity style={styles.viewAllButton}>
-                    <Text style={styles.viewAllText}>View All</Text>
-                    <MaterialIcons name="arrow-forward-ios" size={14} color={COLORS.primary} />
-                  </TouchableOpacity>
+                  {!isSearching && (
+                    <TouchableOpacity style={styles.viewAllButton}>
+                      <Text style={styles.viewAllText}>View All</Text>
+                      <MaterialIcons name="arrow-forward-ios" size={14} color={COLORS.primary} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               }
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Icon name="shoe-sneaker" size={80} color={COLORS.primaryLight} />
-                  <Text style={styles.emptyTitle}>No Products Found</Text>
-                  <Text style={styles.emptyText}>
-                    We couldn't find any products that match your criteria
+                  <Text style={styles.emptyTitle}>
+                    {isSearching ? 'No Matching Products' : 'No Products Found'}
                   </Text>
-                  <TouchableOpacity style={styles.refreshButton} onPress={fetchProducts}>
-                    <Ionicons name="refresh" size={16} color={COLORS.white} />
-                    <Text style={styles.refreshButtonText}>Refresh</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.emptyText}>
+                    {isSearching 
+                      ? `We could not find any products matching "${searchQuery}"`
+                      : 'We could not find any products that match your criteria'
+                    }
+                  </Text>
+                  {isSearching ? (
+                    <TouchableOpacity 
+                      style={styles.clearSearchButton} 
+                      onPress={handleClearSearch}
+                    >
+                      <Ionicons name="close-circle-outline" size={16} color={COLORS.white} />
+                      <Text style={styles.clearSearchText}>Clear Search</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={styles.refreshButton} onPress={fetchProducts}>
+                      <Ionicons name="refresh" size={16} color={COLORS.white} />
+                      <Text style={styles.refreshButtonText}>Refresh</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               }
             />

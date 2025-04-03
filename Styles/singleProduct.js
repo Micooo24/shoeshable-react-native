@@ -1,5 +1,7 @@
-import { COLORS } from '../Theme/color';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+import { COLORS } from '../Theme/color.js';
+
+const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
   container: {
@@ -7,88 +9,151 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   header: {
-    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    elevation: 4,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    marginTop: 33,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: COLORS.white,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 4,
   },
   cartButton: {
-    width: 40,
-    height: 40,
+    padding: 4,
+  },
+  headerRight: {
+    width: 32,
+  },
+  carouselContainer: {
+    width: width,
+    height: width * 0.8, 
+    position: 'relative',
+    backgroundColor: COLORS.lightGray,
+  },
+  carouselImageContainer: {
+    width: width,
+    height: width * 0.8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  imageContainer: {
-    width: '100%',
-    height: 300,
-    position: 'relative',
-  },
-  mainImage: {
-    width: '100%',
-    height: '100%',
+  carouselImage: {
+    width: width,
+    height: width * 0.8,
   },
   imagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: COLORS.light,
+    width: width,
+    height: width * 0.8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightGray,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  waterproofBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: COLORS.primary,
+  
+  // Pagination Indicators
+  paginationContainer: {
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
   },
-  waterproofText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
-    fontSize: 12,
-    marginLeft: 4,
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    marginHorizontal: 4,
   },
-  additionalImagesContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    backgroundColor: COLORS.light,
+  paginationDotActive: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
-  additionalImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 8,
+  
+  // Thumbnail Navigation
+  thumbnailContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.white,
+  },
+  thumbnailWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: COLORS.lightGray,
+    overflow: 'hidden',
+  },
+  activeThumbnail: {
     borderWidth: 2,
-    borderColor: COLORS.white,
+    borderColor: COLORS.primary,
   },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  
+  // Loading & Error Styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.gray,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.danger,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+  },
+  
+  // Product Info Styles
   productInfoContainer: {
     padding: 16,
   },
   productName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.dark,
     marginBottom: 12,
   },
   priceStockContainer: {
@@ -96,16 +161,13 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.light,
   },
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   priceText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.primary,
   },
@@ -114,9 +176,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stockText: {
-    fontSize: 14,
-    fontWeight: '600',
     marginLeft: 4,
+    fontSize: 14,
   },
   inStock: {
     color: COLORS.success,
@@ -127,6 +188,8 @@ export const styles = StyleSheet.create({
   outOfStock: {
     color: COLORS.danger,
   },
+  
+  // Metadata Styles
   metadataContainer: {
     marginBottom: 16,
   },
@@ -136,141 +199,125 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   metadataText: {
-    fontSize: 16,
-    color: COLORS.text,
     marginLeft: 8,
-    textTransform: 'capitalize',
+    fontSize: 14,
+    color: COLORS.dark,
   },
   metadataLabel: {
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
+  
+  // Description Styles
   descriptionContainer: {
     marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.light,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
+    fontWeight: '600',
+    color: COLORS.dark,
     marginBottom: 8,
   },
   descriptionText: {
-    fontSize: 16,
-    color: COLORS.textLight,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.gray,
   },
+  
+  // Sizes & Colors
   sizesContainer: {
     marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.light,
   },
   sizesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   sizeChip: {
-    backgroundColor: COLORS.light,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 16,
     marginRight: 8,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.lightDark,
   },
   sizeText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.dark,
   },
   colorsContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   colorsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   colorChip: {
-    backgroundColor: COLORS.light,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 16,
     marginRight: 8,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.lightDark,
   },
   colorText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.dark,
   },
+  
+  // Action Bar Styles
   actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    borderTopColor: COLORS.light,
+    borderTopColor: COLORS.lightGray,
     backgroundColor: COLORS.white,
   },
   wishlistButton: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.light,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+    borderColor: COLORS.lightGray,
+    borderRadius: 24,
+    marginRight: 12,
   },
   addToCartButton: {
-    flex: 1,
-    alignItems: 'center',
+    flex: 3,
+    flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: COLORS.primary,
-    paddingVertical: 10,
     borderRadius: 8,
-    marginRight: 8,
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-  },
-  buyNowButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.light,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  disabledButton: {
-    backgroundColor: COLORS.lightDark,
-    borderColor: COLORS.lightDark,
+    paddingVertical: 12,
+    marginRight: 10,
   },
   buttonText: {
+    marginLeft: 8,
     color: COLORS.white,
+    fontSize: 16,
     fontWeight: '600',
-    fontSize: 12,
-    marginTop: 4,
+  },
+  buyNowButton: {
+    flex: 2,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingHorizontal: 5,
   },
   buyNowText: {
+    marginLeft: 4,
     color: COLORS.primary,
+    fontSize: 14,
     fontWeight: '600',
-    fontSize: 12,
-    marginTop: 4,
-  }
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
 });

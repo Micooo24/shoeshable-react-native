@@ -178,6 +178,29 @@ export const deleteProduct = (id) => async (dispatch) => {
   }
 };
 
+export const getProductBySlug = (slug) => async (dispatch) => {
+  try {
+    dispatch({ type: GET_PRODUCT_DETAILS_REQUEST });
+    
+    const response = await axios.get(`${baseURL}/api/products/${slug}`);
+    
+    dispatch({ 
+      type: GET_PRODUCT_DETAILS_SUCCESS, 
+      payload: response.data.product 
+    });
+    
+    return response.data.product;
+  } catch (error) {
+    dispatch({ 
+      type: GET_PRODUCT_DETAILS_FAIL, 
+      payload: error.response && error.response.data.error 
+        ? error.response.data.error 
+        : error.message 
+    });
+    console.error('Error fetching product details:', error);
+  }
+};
+
 export const getProductsByCategory = (category) => async (dispatch) => {
   try {
     const response = await axios.get(`${baseURL}/api/products/category/${category}`);
@@ -211,5 +234,38 @@ export const searchProducts = (filters) => async (dispatch) => {
     dispatch({ type: GET_PRODUCTS, payload: response.data.products });
   } catch (error) {
     console.error('Error searching products:', error);
+  }
+};
+
+export const filterProducts = (filters) => async (dispatch) => {
+  try {
+    dispatch({ type: 'FILTER_PRODUCTS_REQUEST' });
+    
+    const queryParams = new URLSearchParams();
+    
+    // Add all filter parameters to the query
+    Object.keys(filters).forEach(key => {
+      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+        queryParams.append(key, filters[key]);
+      }
+    });
+    
+    const response = await axios.get(`${baseURL}/api/products/filter?${queryParams.toString()}`);
+    
+    dispatch({ 
+      type: GET_PRODUCTS,
+      payload: response.data.products 
+    });
+    
+    return response.data;
+  } catch (error) {
+    dispatch({ 
+      type: 'FILTER_PRODUCTS_FAILURE',
+      payload: error.response && error.response.data.error 
+        ? error.response.data.error 
+        : error.message 
+    });
+    console.error('Error filtering products:', error);
+    throw error;
   }
 };

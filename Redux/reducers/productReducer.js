@@ -5,14 +5,16 @@ import {
   GET_PRODUCTS,
   FETCH_ENUM_VALUES_REQUEST,
   FETCH_ENUM_VALUES_SUCCESS,
-  FETCH_ENUM_VALUES_FAILURE
+  FETCH_ENUM_VALUES_FAILURE,
+  // Add new constants for product details
+  GET_PRODUCT_DETAILS_REQUEST,
+  GET_PRODUCT_DETAILS_SUCCESS,
+  GET_PRODUCT_DETAILS_FAIL
 } from '../constants';
-
-// No fallback values - we'll get everything from the API
 
 const initialState = {
   products: [],
-  // Add enum values state - empty object initially
+  // Enum values state
   enumValues: {
     categories: {},
     brands: {},
@@ -21,7 +23,11 @@ const initialState = {
     genders: []
   },
   enumsLoading: false,
-  enumsError: null
+  enumsError: null,
+
+  currentProduct: null,
+  productLoading: false,
+  productError: null
 };
 
 export const productReducer = (state = initialState, action) => {
@@ -71,6 +77,29 @@ export const productReducer = (state = initialState, action) => {
         ...state,
         enumsError: action.payload,
         enumsLoading: false
+      };
+    
+    // Add new cases for single product details
+    case GET_PRODUCT_DETAILS_REQUEST:
+      return { 
+        ...state, 
+        productLoading: true, 
+        productError: null, 
+        currentProduct: null 
+      };
+      
+    case GET_PRODUCT_DETAILS_SUCCESS:
+      return { 
+        ...state, 
+        productLoading: false, 
+        currentProduct: action.payload 
+      };
+      
+    case GET_PRODUCT_DETAILS_FAIL:
+      return { 
+        ...state, 
+        productLoading: false, 
+        productError: action.payload 
       };
       
     default:

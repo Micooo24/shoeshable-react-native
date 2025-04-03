@@ -72,10 +72,10 @@ const BottomNavigator = ({ navigation, activeScreen = 'Home' }) => {
         <Feather
           name="shopping-cart"
           size={22}
-          color={currentRouteName === 'Cart' ? COLORS.primary : COLORS.darkGrey}
+          color={currentRouteName === 'Dashboard' ? COLORS.primary : COLORS.darkGrey}
           style={styles.tabIcon}
         />
-        <Text style={[styles.tabLabel, currentRouteName === 'Cart' && styles.activeTabLabel]}>
+        <Text style={[styles.tabLabel, currentRouteName === 'Dashboard' && styles.activeTabLabel]}>
           Cart
         </Text>
       </TouchableOpacity>
