@@ -96,6 +96,35 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 10,
   },
+    clearCartButton: {
+      backgroundColor: COLORS.danger,
+      padding: 10,
+      borderRadius: 5,
+      marginTop: 10,
+      alignItems: 'center',
+  },
+  cartSummary: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  summaryText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.textDark,
+    marginBottom: 5,
+  },
+  clearCartButtonText: {
+      color: COLORS.white,
+      fontSize: 16,
+      fontWeight: 'bold',
+  },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -179,5 +208,12 @@ export const styles = StyleSheet.create({
     shadowRadius: 5,
     borderTopWidth: 1,
     borderTopColor: COLORS.light,
+  },
+  dropdownLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 10,
+    marginBottom: 5,
+    color: COLORS.primary,
   },
 });

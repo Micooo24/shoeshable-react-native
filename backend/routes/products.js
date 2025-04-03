@@ -13,7 +13,7 @@ router.put('/update-product/:id', upload.array('image', 5), update);
 
 router.get('/enums', getEnumValues)
 router.get('/get-products', getAllProducts);
-router.get('/get-product/:slug', getProductBySlug);
-router.get('/get-product/:id', getProductById);
+router.get('/get-product-by-slug/:slug', getProductBySlug);
+router.get('/get-product-by-id/:id', getProductById);
 router.delete('/remove-product/:id', remove);
 module.exports = router;

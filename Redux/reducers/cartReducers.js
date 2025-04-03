@@ -2,9 +2,9 @@ import {
     ADD_TO_CART,
     GET_CART,
     UPDATE_CART_ITEM,
-    // REMOVE_FROM_CART,
-    // CLEAR_CART,
-    // UPDATE_CART_QUANTITY,
+    UPDATE_CART_QUANTITY, // Import the new action type
+    REMOVE_FROM_CART,
+    CLEAR_CART,
 } from '../constants';
 
 const initialState = {
@@ -73,23 +73,54 @@ export const cartReducer = (state = initialState, action) => {
                 cartItems: updatedCartItems,
             };
         }
-        // Uncomment and implement these cases as needed
-        // case REMOVE_FROM_CART:
-        //     return handleRemoveFromCart(state, action);
 
-        // case CLEAR_CART:
-        //     return {
-        //         ...state,
-        //         cartItems: [],
-        //         totalQuantity: 0,
-        //         totalPrice: 0,
-        //     };
+        case UPDATE_CART_QUANTITY: {
+            const { productId, quantity } = action.payload;
 
-        // case UPDATE_CART_ITEM:
-        //     return handleUpdateCartItem(state, action);
+            // Update the quantity of the specific cart item
+            const updatedCartItems = state.cartItems.map(item =>
+                item.productId === productId
+                    ? { ...item, quantity } // Update quantity
+                    : item
+            );
 
-        // case UPDATE_CART_QUANTITY:
-        //     return handleUpdateCartQuantity(state, action);
+            // Recalculate total quantity and total price
+            const totalQuantity = updatedCartItems.reduce((sum, item) => sum + item.quantity, 0);
+            const totalPrice = updatedCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+            return {
+                ...state,
+                cartItems: updatedCartItems,
+                totalQuantity,
+                totalPrice,
+            };
+        }
+
+        case REMOVE_FROM_CART: {
+            const productId = action.payload;
+
+            // Filter out the item to be removed
+            const updatedCartItems = state.cartItems.filter(item => item.productId !== productId);
+
+            // Recalculate total quantity and total price
+            const totalQuantity = updatedCartItems.reduce((sum, item) => sum + item.quantity, 0);
+            const totalPrice = updatedCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+            return {
+                ...state,
+                cartItems: updatedCartItems,
+                totalQuantity,
+                totalPrice,
+            };
+        }
+
+        case CLEAR_CART:
+            return {
+                ...state,
+                cartItems: [],
+                totalQuantity: 0,
+                totalPrice: 0,
+            };
 
         default:
             return state;

@@ -97,6 +97,7 @@ exports.getAllCartItems = async (req, res) => {
     });
   }
 };
+
 // Update an item's quantity in the cart authenticated user
 exports.updateCartItemQuantity= async (req, res) => {
   const { productId, quantity } = req.body;

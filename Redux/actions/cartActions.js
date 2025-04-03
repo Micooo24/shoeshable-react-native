@@ -123,7 +123,6 @@ export const getCarts = () => {
     };
 };
 
-
 // Update Cart Item Action
 export const updateCartItem = (productId, updatedFields) => {
     return async (dispatch) => {
@@ -172,6 +171,176 @@ export const updateCartItem = (productId, updatedFields) => {
                 return {
                     success: false,
                     message: error.response.data.message || 'Failed to update cart item.',
+                };
+            }
+
+            // Handle unexpected errors
+            return {
+                success: false,
+                message: 'An unexpected error occurred. Please try again.',
+            };
+        }
+    };
+};
+
+// Update Cart Quantity Action
+export const updateCartItemQuantity = (productId, quantity) => {
+    return async (dispatch) => {
+        try {
+            // Get the token from the database
+            const tokenData = await getToken();
+            const authToken = tokenData?.authToken;
+
+            if (!authToken) {
+                console.error('No auth token found. User might not be logged in.');
+                return {
+                    success: false,
+                    message: 'Unauthorized. Please log in to update the cart.',
+                };
+            }
+
+            // Make the API request to update the cart quantity
+            const response = await axios.put(
+                `${baseURL}/api/cart/update-quantity`,
+                { productId, quantity }, // Send productId and quantity
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`, // Add the token to the Authorization header
+                    },
+                }
+            );
+
+            // Dispatch the action to update the Redux store
+            dispatch({
+                type: UPDATE_CART_QUANTITY,
+                payload: response.data.cartItem, // Assuming the API returns the updated cart item in response.data.cartItem
+            });
+
+            // Return the response for further handling
+            return {
+                success: true,
+                message: response.data.message || 'Cart item quantity updated successfully.',
+                cartItem: response.data.cartItem,
+            };
+        } catch (error) {
+            console.error('Error updating cart item quantity:', error);
+
+            // Handle specific error responses from the backend
+            if (error.response && error.response.data) {
+                return {
+                    success: false,
+                    message: error.response.data.message || 'Failed to update cart item quantity.',
+                };
+            }
+
+            // Handle unexpected errors
+            return {
+                success: false,
+                message: 'An unexpected error occurred. Please try again.',
+            };
+        }
+    };
+};
+
+// Remove Cart Item Action
+export const removeFromCart = (productId) => {
+    return async (dispatch) => {
+        try {
+            // Get the token from the database
+            const tokenData = await getToken();
+            const authToken = tokenData?.authToken;
+
+            if (!authToken) {
+                console.error('No auth token found. User might not be logged in.');
+                return {
+                    success: false,
+                    message: 'Unauthorized. Please log in to remove items from the cart.',
+                };
+            }
+
+            // Make the API request to delete the cart item
+            const response = await axios.delete(`${baseURL}/api/cart/delete`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${authToken}`, // Add the token to the Authorization header
+                },
+                data: { productId }, // Send productId in the request body
+            });
+
+            // Dispatch the action to update the Redux store
+            dispatch({
+                type: REMOVE_FROM_CART,
+                payload: productId, // Assuming the API confirms the item was removed
+            });
+
+            // Return the response for further handling
+            return {
+                success: true,
+                message: response.data.message || 'Item removed from cart successfully.',
+            };
+        } catch (error) {
+            console.error('Error removing item from cart:', error);
+
+            // Handle specific error responses from the backend
+            if (error.response && error.response.data) {
+                return {
+                    success: false,
+                    message: error.response.data.message || 'Failed to remove item from cart.',
+                };
+            }
+
+            // Handle unexpected errors
+            return {
+                success: false,
+                message: 'An unexpected error occurred. Please try again.',
+            };
+        }
+    };
+};
+
+// Clear Cart Action
+export const clearCart = () => {
+    return async (dispatch) => {
+        try {
+            // Get the token from the database
+            const tokenData = await getToken();
+            const authToken = tokenData?.authToken;
+
+            if (!authToken) {
+                console.error('No auth token found. User might not be logged in.');
+                return {
+                    success: false,
+                    message: 'Unauthorized. Please log in to clear the cart.',
+                };
+            }
+
+            // Make the API request to clear the cart
+            const response = await axios.delete(`${baseURL}/api/cart/clear`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${authToken}`, // Add the token to the Authorization header
+                },
+            });
+
+            // Dispatch the action to clear the Redux store
+            dispatch({
+                type: CLEAR_CART, // Assuming you have a CLEAR_CART action type
+            });
+
+            // Return the response for further handling
+            return {
+                success: true,
+                message: response.data.message || 'Cart cleared successfully.',
+            };
+        } catch (error) {
+            console.error('Error clearing cart:', error);
+
+            // Handle specific error responses from the backend
+            if (error.response && error.response.data) {
+                return {
+                    success: false,
+                    message: error.response.data.message || 'Failed to clear cart.',
                 };
             }
 
