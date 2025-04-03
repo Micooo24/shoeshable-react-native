@@ -1,37 +1,4 @@
-import SQLite from 'react-native-sqlite-storage';
-
-SQLite.DEBUG(true);
-SQLite.enablePromise(true);
-
-const initializeDatabase = async () => {
-  try {
-    const db = await SQLite.openDatabase({
-      name: 'shoeshable.db',
-      location: 'default', // Default location for SQLite database
-    });
-
-    console.log('Database initialized successfully:', db);
-
-    // Create a table to ensure the database file is created
-    await db.transaction(tx => {
-      tx.executeSql(
-        `CREATE TABLE IF NOT EXISTS auth (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          authToken TEXT NOT NULL,
-          email TEXT NOT NULL
-        );`,
-        [],
-        () => console.log('Auth table created successfully'),
-        (_, error) => console.error('Error creating auth table:', error)
-      );
-    });
-
-    return db;
-  } catch (error) {
-    console.error('Error initializing database:', error);
-    throw error;
-  }
-};
+import { getDatabase } from '../sqlite_db/Database';
 
 /**
  * Save the token and email into the auth table.
@@ -41,7 +8,7 @@ const initializeDatabase = async () => {
  */
 export const saveToken = async (token, email) => {
   try {
-    const db = await initializeDatabase();
+    const db = await getDatabase();
 
     return new Promise((resolve, reject) => {
       db.transaction(tx => {
@@ -83,7 +50,7 @@ export const saveToken = async (token, email) => {
  */
 export const getToken = async () => {
   try {
-    const db = await initializeDatabase();
+    const db = await getDatabase();
 
     return new Promise((resolve, reject) => {
       db.transaction(tx => {
@@ -119,7 +86,7 @@ export const getToken = async () => {
  */
 export const removeToken = async () => {
   try {
-    const db = await initializeDatabase();
+    const db = await getDatabase();
 
     return new Promise((resolve, reject) => {
       db.transaction(tx => {
@@ -142,6 +109,3 @@ export const removeToken = async () => {
     throw error;
   }
 };
-
-// Initialize the database when this module is imported
-initializeDatabase();

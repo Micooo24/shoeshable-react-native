@@ -2,7 +2,7 @@ import {
     ADD_TO_CART,
     GET_CART,
     UPDATE_CART_ITEM,
-    UPDATE_CART_QUANTITY, // Import the new action type
+    UPDATE_CART_QUANTITY, 
     REMOVE_FROM_CART,
     CLEAR_CART,
 } from '../constants';
