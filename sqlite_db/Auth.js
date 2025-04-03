@@ -1,4 +1,4 @@
-import { getDatabase } from '../sqlite_db/Database';
+import { getDatabase } from './Database';
 
 /**
  * Save the token and email into the auth table.

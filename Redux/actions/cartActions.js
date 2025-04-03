@@ -8,7 +8,7 @@ import {
 } from '../constants';
 import baseURL from '../../assets/common/baseurl';
 import axios from 'axios';
-import { getToken } from '../../utils/Auth';
+import { getToken } from '../../sqlite_db/Auth';
 
 
 //Add Cart Actions with Authenticated User

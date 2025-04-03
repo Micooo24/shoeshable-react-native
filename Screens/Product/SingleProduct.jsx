@@ -6,7 +6,7 @@ import { styles } from '../../Styles/singleProduct.js';
 import { COLORS } from '../../Theme/color.js';
 import { useDispatch } from 'react-redux'; // Import useDispatch
 import { addToCart } from '../../Redux/actions/cartActions'; // Import addToCart
-import { getToken } from '../../utils/Auth'; // Import getToken
+import { getToken } from '../../sqlite_db/Auth'; // Import getToken
 const { width } = Dimensions.get('window');
 
 const DisplaySingleProduct = ({ route, navigation }) => {

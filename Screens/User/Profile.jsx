@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import BottomNavigator from "../../Navigators/BottomNavigator";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { getToken, removeToken } from "../../utils/Auth"; // Import auth functions
+import { getToken, removeToken } from "../../sqlite_db/Auth"; // Import auth functions
 
 const COLORS = {
   primary: "#2c3e50", // Dark blue-gray

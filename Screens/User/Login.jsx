@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
-import { saveToken } from '../../utils/Auth';
+import { saveToken } from '../../sqlite_db/Auth';
 import baseURL from '../../assets/common/baseurl';
 import axios from 'axios';
 
