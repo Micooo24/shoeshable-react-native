@@ -1,21 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Text, View, StatusBar, ActivityIndicator, Image,
-  TouchableOpacity, ScrollView, Alert, Modal
+  TouchableOpacity, ScrollView, Modal, SafeAreaView
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker'
 import { styles } from '../../Styles/cart';
 import { COLORS } from '../../Theme/color';
 import { useDispatch, useSelector } from 'react-redux';
-import { 
-  getCarts, updateCartItemQuantity, removeFromCart, clearCart, updateCartItem
-} from '../../Redux/actions/cartActions';
+import { getCarts } from '../../Redux/actions/cartActions';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import BottomNavigator from '../../Navigators/BottomNavigator';
 import { getToken } from '../../sqlite_db/Auth';
 import { jwtDecode } from 'jwt-decode';
-import axios from 'axios';
-import baseURL from '../../assets/common/baseurl';
+import createCartHandlers, { 
+  getProductName, getProductPrice, getProductImage, calculateSubtotal 
+} from '../../utils/cartHandlers';
 
 const CartScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -29,6 +28,43 @@ const CartScreen = ({ navigation }) => {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Create handlers with access to component state and dispatch
+  const handlers = createCartHandlers(
+    dispatch, 
+    setLoading, 
+    setIsOffline,
+    setModalVisible,
+    setSelectedItem,
+    setProductDetails,
+    setSelectedSize,
+    setSelectedColor,
+    setLoadingDetails
+  );
+  
+  // Use destructuring to get all handler functions
+  const { 
+    handleOpenModal,
+    handleIncreaseQuantity,
+    handleDecreaseQuantity,
+    handleRemoveItem,
+    handleClearCart
+  } = handlers;
+
+  const handleCheckout = () => {
+    // You can pass cart data and total amount to the checkout screen
+    const subtotal = calculateSubtotal(cartItems);
+    navigation.navigate('Checkout', { 
+      cartItems, 
+      subtotal,
+      userId
+    });
+  }
+
+  // Create a wrapped version of handleUpdateCartItem that includes the needed state
+  const handleUpdateCartItem = useCallback(() => {
+    handlers.handleUpdateCartItem(selectedItem, selectedSize, selectedColor);
+  }, [handlers, selectedItem, selectedSize, selectedColor]);
 
   useEffect(() => {
     const getUserId = async () => {
@@ -70,357 +106,183 @@ const CartScreen = ({ navigation }) => {
     fetchCartItems();
   }, [dispatch, userId]);
 
-  const getProductId = (item) => {
-    if (item.productId && typeof item.productId === 'object' && item.productId._id) {
-      return item.productId._id;
-    } else if (typeof item.productId === 'string') {
-      return item.productId;
-    } else if (item.product_id) {
-      return item.product_id;
-    }
-    return item._id || null;
-  };
-
-  const getProductName = (item) => {
-    return (item.productId && item.productId.name) ? 
-      item.productId.name : 
-      item.productName || `${item.brand || ''} ${item.category || ''}`;
-  };
-
-  const getProductPrice = (item) => {
-    return (item.productId && item.productId.price) ? 
-      parseFloat(item.productId.price) : 
-      (item.productPrice ? parseFloat(item.productPrice) : 0);
-  };
-
-  const getProductImage = (item) => {
-    return (item.productId && item.productId.image && item.productId.image[0]) || 
-      item.productImage || null;
-  };
-
-  const handleOpenModal = async (item) => {
-    try {
-      // Set initial state
-      setSelectedItem(item);
-      setSelectedSize(item.size || '');
-      setSelectedColor(item.color || '');
-      setModalVisible(true);
-      setLoadingDetails(true);
-      
-      // Get product ID directly from the item
-      const productId = item.productId?._id || item.product_id || item.productId;
-      
-      if (!productId) {
-        console.error('Cannot identify product ID:', item);
-        setLoadingDetails(false);
-        return;
-      }
-      
-      console.log(`Fetching product details from: ${baseURL}/api/products/get-product-by-id/${productId}`);
-      
-      // Use fetch instead of axios
-      const response = await fetch(`${baseURL}/api/products/get-product-by-id/${productId}`);
-      const data = await response.json();
-      
-      console.log('Product Details Response:', data);
-      
-      if (data && data.product) {
-        const details = data.product;
-        
-        // Store the full product details directly from API response
-        setProductDetails(details);
-        
-        // Make sure we're using the right property names from the API response
-        setSelectedSize(item.size || (details.size && details.size[0]) || '');
-        setSelectedColor(item.color || (details.color && details.color[0]) || '');
-      } else {
-        console.error('Failed to fetch product details:', data?.message || 'Unknown error');
-      }
-    } catch (error) {
-      console.error('Error fetching product details:', error);
-    } finally {
-      setLoadingDetails(false);
-    }
-  };
-
-  const handleUpdateCartItem = async () => {
-    try {
-      setLoading(true);
-      const productId = getProductId(selectedItem);
-      
-      if (!selectedSize || !selectedColor) {
-        Alert.alert('Error', 'Please select both size and color.');
-        setLoading(false);
-        return;
-      }
-      
-      const updatedFields = {
-        size: selectedSize,
-        color: selectedColor,
-      };
-      
-      const response = await dispatch(updateCartItem(productId, updatedFields));
-      
-      if (response && response.success) {
-        setModalVisible(false);
-        await dispatch(getCarts());
-        Alert.alert('Success', 'Cart item updated successfully.');
-      } else {
-        Alert.alert('Error', response?.message || 'Failed to update cart item.');
-      }
-    } catch (error) {
-      console.error('Error updating cart item:', error);
-      Alert.alert('Error', 'Failed to update cart item. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleIncreaseQuantity = async (item) => {
-    try {
-      setLoading(true);
-      const productId = getProductId(item);
-      const quantity = (item.quantity || 1) + 1;
-      
-      const response = await dispatch(updateCartItemQuantity(productId, quantity));
-      if (response && response.offline) {
-        setIsOffline(true);
-      }
-      
-      await dispatch(getCarts());
-    } catch (error) {
-      console.error('Error increasing quantity:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDecreaseQuantity = async (item) => {
-    try {
-      setLoading(true);
-      const productId = getProductId(item);
-      const quantity = (item.quantity || 1) - 1;
-      
-      if (quantity <= 0) {
-        await dispatch(removeFromCart(productId));
-      } else {
-        await dispatch(updateCartItemQuantity(productId, quantity));
-      }
-      
-      await dispatch(getCarts());
-    } catch (error) {
-      console.error('Error decreasing quantity:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveItem = async (item) => {
-    const productId = getProductId(item);
-    Alert.alert(
-      "Remove Item",
-      "Are you sure you want to remove this item from your cart?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Remove", 
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              const response = await dispatch(removeFromCart(productId));
-              
-              if (response && response.offline) {
-                setIsOffline(true);
-              }
-              
-              await dispatch(getCarts());
-            } catch (error) {
-              console.error('Error removing item:', error);
-              Alert.alert('Error', 'Failed to remove item. Please try again.');
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleClearCart = () => {
-    Alert.alert(
-      "Clear Cart",
-      "Are you sure you want to remove all items from your cart?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Clear", 
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              const response = await dispatch(clearCart());
-              
-              if (response && response.offline) {
-                setIsOffline(true);
-              }
-              
-              await dispatch(getCarts());
-            } catch (error) {
-              console.error('Error clearing cart:', error);
-              Alert.alert('Error', 'Failed to clear cart. Please try again.');
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const calculateSubtotal = () => {
-    if (!cartItems || cartItems.length === 0) return 0;
-    
-    return cartItems.reduce((total, item) => {
-      return total + (getProductPrice(item) * (item.quantity || 1));
-    }, 0);
-  };
-
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background || '#f5f5f5' }}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       
-      {isOffline && (
-        <View style={styles.offlineBanner}>
-          <Icon name="cloud-off" size={16} color="white" />
-          <Text style={styles.offlineBannerText}>
-            Offline Mode - Changes will sync when online
-          </Text>
-        </View>
-      )}
-      
-      <ScrollView style={{ flex: 1, padding: 16 }}>
-        {loading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        ) : (
-          <>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>
-              Cart Items ({cartItems?.length || 0})
+      <View style={{ flex: 1 }}>
+        {isOffline && (
+          <View style={styles.offlineBanner}>
+            <Icon name="cloud-off" size={16} color="white" />
+            <Text style={styles.offlineBannerText}>
+              Offline Mode - Changes will sync when online
             </Text>
-            
-            {!cartItems || cartItems.length === 0 ? (
-              <View style={{ 
-                padding: 20, 
-                backgroundColor: COLORS.white,
-                borderRadius: 8,
-                alignItems: 'center'
-              }}>
-                <Icon name="shopping-cart" size={50} color={COLORS.textLight} />
-                <Text style={styles.emptyText}>Your cart is empty</Text>
-              </View>
-            ) : (
-              <View>
-                {cartItems.map((item, index) => (
-                  <TouchableOpacity 
-                    key={index}
-                    onPress={() => handleOpenModal(item)}
-                  >
-                    <View 
-                      style={{
-                        padding: 16,
-                        backgroundColor: COLORS.white,
-                        borderRadius: 8,
-                        marginBottom: 12,
-                        flexDirection: 'row'
-                      }}
-                    >
-                      <View style={{ width: 80, height: 80, marginRight: 12 }}>
-                        {getProductImage(item) ? (
-                          <Image 
-                            source={{ uri: getProductImage(item) }}
-                            style={{ width: '100%', height: '100%', borderRadius: 4 }}
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <View style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            backgroundColor: '#f0f0f0',
-                            borderRadius: 4,
-                            justifyContent: 'center',
-                            alignItems: 'center'
-                          }}>
-                            <Icon name="image-not-supported" size={24} color="#999" />
-                          </View>
-                        )}
-                      </View>
-                      
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: 16 }}>
-                          {getProductName(item)}
-                        </Text>
-                        <Text>Size: {item.size || 'N/A'}</Text>
-                        <Text>Color: {item.color || 'N/A'}</Text>
-                        <Text>Price: ₱{getProductPrice(item).toFixed(2)}</Text>
-                        
-                        <View style={{ 
-                          flexDirection: 'row', 
-                          alignItems: 'center',
-                          marginTop: 8,
-                          justifyContent: 'space-between'
-                        }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <TouchableOpacity onPress={() => handleDecreaseQuantity(item)}>
-                              <Icon name="remove-circle" size={24} color={COLORS.primary} />
-                            </TouchableOpacity>
-                            <Text style={{ marginHorizontal: 8, minWidth: 20, textAlign: 'center' }}>
-                              {item.quantity || 1}
-                            </Text>
-                            <TouchableOpacity onPress={() => handleIncreaseQuantity(item)}>
-                              <Icon name="add-circle" size={24} color={COLORS.primary} />
-                            </TouchableOpacity>
-                          </View>
-                          
-                          <TouchableOpacity onPress={() => handleRemoveItem(item)}>
-                            <Icon name="delete" size={24} color={COLORS.danger} />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-
-                <View style={{
+          </View>
+        )}
+        
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+          overScrollMode="always"
+        >
+          {loading ? (
+            <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
+          ) : (
+            <>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>
+                Cart Items ({cartItems?.length || 0})
+              </Text>
+              
+              {!cartItems || cartItems.length === 0 ? (
+                <View style={{ 
+                  padding: 20, 
                   backgroundColor: COLORS.white,
                   borderRadius: 8,
-                  padding: 16,
-                  marginTop: 12
+                  alignItems: 'center'
                 }}>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold' }}>
-                    Total: ₱{calculateSubtotal().toFixed(2)}
-                  </Text>
-                  
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: COLORS.danger,
-                      padding: 12,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                      marginTop: 16
-                    }}
-                    onPress={handleClearCart}
-                  >
-                    <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>
-                      Clear Cart
-                    </Text>
-                  </TouchableOpacity>
+                  <Icon name="shopping-cart" size={50} color={COLORS.textLight} />
+                  <Text style={styles.emptyText}>Your cart is empty</Text>
                 </View>
-              </View>
-            )}
-          </>
-        )}
-      </ScrollView>
+              ) : (
+                <View>
+                  {cartItems.map((item, index) => (
+                    <TouchableOpacity 
+                      key={index}
+                      onPress={() => handleOpenModal(item)}
+                    >
+                      <View 
+                        style={{
+                          padding: 16,
+                          backgroundColor: COLORS.white,
+                          borderRadius: 8,
+                          marginBottom: 12,
+                          flexDirection: 'row'
+                        }}
+                      >
+                        <View style={{ width: 80, height: 80, marginRight: 12 }}>
+                          {getProductImage(item) ? (
+                            <Image 
+                              source={{ uri: getProductImage(item) }}
+                              style={{ width: '100%', height: '100%', borderRadius: 4 }}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <View style={{ 
+                              width: '100%', 
+                              height: '100%', 
+                              backgroundColor: '#f0f0f0',
+                              borderRadius: 4,
+                              justifyContent: 'center',
+                              alignItems: 'center'
+                            }}>
+                              <Icon name="image-not-supported" size={24} color="#999" />
+                            </View>
+                          )}
+                        </View>
+                        
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontWeight: 'bold', fontSize: 16 }}>
+                            {getProductName(item)}
+                          </Text>
+                          <Text>Size: {item.size || 'N/A'}</Text>
+                          <Text>Color: {item.color || 'N/A'}</Text>
+                          <Text>Price: ₱{getProductPrice(item).toFixed(2)}</Text>
+                          
+                          <View style={{ 
+                            flexDirection: 'row', 
+                            alignItems: 'center',
+                            marginTop: 8,
+                            justifyContent: 'space-between'
+                          }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              <TouchableOpacity onPress={() => handleDecreaseQuantity(item)}>
+                                <Icon name="remove-circle" size={24} color={COLORS.primary} />
+                              </TouchableOpacity>
+                              <Text style={{ marginHorizontal: 8, minWidth: 20, textAlign: 'center' }}>
+                                {item.quantity || 1}
+                              </Text>
+                              <TouchableOpacity onPress={() => handleIncreaseQuantity(item)}>
+                                <Icon name="add-circle" size={24} color={COLORS.primary} />
+                              </TouchableOpacity>
+                            </View>
+                            
+                            <TouchableOpacity onPress={() => handleRemoveItem(item)}>
+                              <Icon name="delete" size={24} color={COLORS.danger} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
 
+                  <View style={{
+                    backgroundColor: COLORS.white,
+                    borderRadius: 8,
+                    padding: 16,
+                    marginTop: 12,
+                    marginBottom: 70
+                  }}>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold' }}>
+                      Total: ₱{calculateSubtotal(cartItems).toFixed(2)}
+                    </Text>
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: COLORS.primary,
+                          padding: 12,
+                          borderRadius: 6,
+                          alignItems: 'center',
+                          marginTop: 16
+                        }}
+                        onPress={handleCheckout}
+                      >
+                        <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>
+                          Proceed to Checkout
+                        </Text>
+                      </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: COLORS.danger,
+                        padding: 12,
+                        borderRadius: 6,
+                        alignItems: 'center',
+                        marginTop: 16
+                      }}
+                      onPress={handleClearCart}
+                    >
+                      <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>
+                        Clear Cart
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
+
+        <View style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: COLORS.white,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: -2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 3.84,
+        }}>
+          <BottomNavigator navigation={navigation} activeScreen="Cart" />
+        </View>
+      </View>
+
+      {/* Modal remains the same */}
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -489,11 +351,7 @@ const CartScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-
-      <View style={styles.bottomNavContainer}>
-        <BottomNavigator navigation={navigation} activeScreen="Cart" />
-      </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
