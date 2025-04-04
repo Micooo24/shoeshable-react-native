@@ -32,11 +32,12 @@ export const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.textLight,
-    textAlign: 'center',
-  },
+    emptyText: {
+      fontSize: 18,
+      color: COLORS.textLight,
+      marginTop: 12,
+      textAlign: 'center',
+    },
   cartItem: {
     padding: 15,
     marginVertical: 8,
@@ -215,5 +216,17 @@ export const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 5,
     color: COLORS.primary,
+  },
+  offlineBanner: {
+    backgroundColor: '#ff9800',
+    padding: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  offlineBannerText: {
+    color: 'white',
+    marginLeft: 5,
+    fontSize: 14,
   },
 });

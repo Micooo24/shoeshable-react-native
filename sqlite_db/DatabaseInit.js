@@ -33,9 +33,12 @@ export const initializeTables = async () => {
           size TEXT,
           color TEXT,
           gender TEXT,
+          productImage TEXT,
+          productName TEXT,
+          productPrice INTEGER,
           createdAt TEXT,
           updatedAt TEXT,
-          UNIQUE(user_id, product_id)
+          UNIQUE(user_id, product_id, size, color)
         );`,
         [],
         () => console.log('Cart table created successfully'),
@@ -46,6 +49,24 @@ export const initializeTables = async () => {
     console.log('All tables initialized successfully');
   } catch (error) {
     console.error('Error initializing tables:', error);
+    throw error;
+  }
+};
+
+export const dropCartTable = async () => {
+  try {
+    const db = await getDatabase();
+    
+    await db.transaction(tx => {
+      tx.executeSql(
+        `DROP TABLE IF EXISTS cart;`,
+        [],
+        () => console.log('Cart table dropped successfully'),
+        (_, error) => console.error('Error dropping cart table:', error)
+      );
+    });
+  } catch (error) {
+    console.error('Error dropping cart table:', error);
     throw error;
   }
 };

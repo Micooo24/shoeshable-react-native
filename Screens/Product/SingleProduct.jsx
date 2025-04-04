@@ -11,7 +11,7 @@ const { width } = Dimensions.get('window');
 
 const DisplaySingleProduct = ({ route, navigation }) => {
   const { product } = route.params;
-  
+  console.log('Product:', product); // Log the product details for debugging
   const dispatch = useDispatch(); // Initialize dispatch
   const getBrandIcon = (brand) => {
     if (!brand) return <FontAwesome5 name="tag" size={18} color={COLORS.primary} />;
@@ -105,10 +105,14 @@ const DisplaySingleProduct = ({ route, navigation }) => {
             size: selectedSize,
             color: selectedColor,
             gender: product.gender,
+            productName: product.name,
+            productPrice: product.price,
+            productImage: product.image && product.image.length > 0 ? product.image[0] : null, // Get the first image
         };
 
         // Dispatch the addToCart action and wait for the response
         const response = await dispatch(addToCart(selectedDetails));
+        console.log('Product being added to cart:', JSON.stringify(selectedDetails));
 
         // Handle the response
         if (response?.success) {
