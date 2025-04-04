@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, ScrollView, SafeAreaView, TouchableOpacity, 
-  Image, Modal, ActivityIndicator, Alert 
+  Image, Modal, ActivityIndicator, Alert, FlatList
 } from 'react-native';
 import { COLORS } from '../../Theme/color';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -19,6 +19,44 @@ const Checkout = ({ navigation, route }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
+
+  // New state for shipping, vouchers, and payment options
+  const shippingFee = 100; // Fixed 100 pesos shipping fee
+  const [voucherModalVisible, setVoucherModalVisible] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState({
+    id: 1, 
+    name: 'Cash on Delivery',
+    icon: 'payments'
+  });
+
+  // Sample vouchers - in a real app, these would come from an API
+  const availableVouchers = [
+    { id: 1, code: 'WELCOME10', discount: 10, description: '10% off your first order' },
+    { id: 2, code: 'SAVE15', discount: 15, description: '15% off all items' },
+    { id: 3, code: 'LOYALTY20', discount: 20, description: '20% off for loyal customers' }
+  ];
+
+  // Sample payment methods - in a real app, these would come from an API
+  const paymentMethods = [
+    { id: 1, name: 'Cash on Delivery', icon: 'payments' },
+    { id: 2, name: 'Credit/Debit Card', icon: 'credit-card' },
+    { id: 3, name: 'GCash', icon: 'account-balance-wallet' }
+  ];
+
+  // Calculate discount amount
+  const getDiscountAmount = () => {
+    if (!selectedVoucher || !subtotal) return 0;
+    return (subtotal * selectedVoucher.discount) / 100;
+  };
+
+  // Calculate final total
+  const getFinalTotal = () => {
+    if (!subtotal) return 0;
+    const discountAmount = getDiscountAmount();
+    return subtotal + shippingFee - discountAmount;
+  };
 
   // Fetch user profile data
   const fetchUserProfile = async () => {
@@ -74,6 +112,18 @@ const Checkout = ({ navigation, route }) => {
     fetchUserProfile();
   };
 
+  // Select voucher handler
+  const handleSelectVoucher = (voucher) => {
+    setSelectedVoucher(voucher);
+    setVoucherModalVisible(false);
+  };
+
+  // Select payment method handler
+  const handleSelectPayment = (payment) => {
+    setSelectedPayment(payment);
+    setPaymentModalVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -115,11 +165,6 @@ const Checkout = ({ navigation, route }) => {
                   </View>
                 </View>
               ))}
-              
-              <View style={styles.totalContainer}>
-                <Text style={styles.totalLabel}>Total Amount:</Text>
-                <Text style={styles.totalAmount}>₱{subtotal ? subtotal.toFixed(2) : "0.00"}</Text>
-              </View>
             </View>
           ) : (
             <Text style={styles.emptyMessage}>No items in cart</Text>
@@ -177,14 +222,79 @@ const Checkout = ({ navigation, route }) => {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Voucher Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Discount Voucher</Text>
+          {selectedVoucher ? (
+            <View style={styles.voucherSelected}>
+              <View style={styles.voucherInfo}>
+                <Icon name="local-offer" size={22} color={COLORS.primary} style={styles.voucherIcon} />
+                <View>
+                  <Text style={styles.voucherCode}>{selectedVoucher.code}</Text>
+                  <Text style={styles.voucherDiscount}>{selectedVoucher.discount}% Off</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.voucherButton}
+                onPress={() => setVoucherModalVisible(true)}
+              >
+                <Icon name="edit" size={20} color={COLORS.primary} />
+                <Text style={styles.voucherButtonText}>Change</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.voucherButton}
+              onPress={() => setVoucherModalVisible(true)}
+            >
+              <Icon name="local-offer" size={20} color={COLORS.primary} />
+              <Text style={styles.voucherButtonText}>Select Voucher</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         
         {/* Payment Method Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Method</Text>
-          <TouchableOpacity style={styles.paymentMethodButton}>
-            <Icon name="payment" size={20} color={COLORS.primary} />
-            <Text style={styles.paymentMethodText}>Cash on Delivery</Text>
-          </TouchableOpacity>
+          <View style={styles.paymentSelected}>
+            <Icon name={selectedPayment.icon} size={22} color={COLORS.primary} style={styles.paymentIcon} />
+            <Text style={styles.paymentMethodText}>{selectedPayment.name}</Text>
+            <TouchableOpacity 
+              style={styles.changePaymentButton}
+              onPress={() => setPaymentModalVisible(true)}
+            >
+              <Text style={styles.changePaymentText}>Change</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Order Summary Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Total</Text>
+          <View style={styles.orderSummary}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Subtotal:</Text>
+              <Text style={styles.summaryValue}>₱{subtotal ? subtotal.toFixed(2) : "0.00"}</Text>
+            </View>
+            
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Shipping Fee:</Text>
+              <Text style={styles.summaryValue}>₱{shippingFee.toFixed(2)}</Text>
+            </View>
+            
+            {selectedVoucher && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Discount ({selectedVoucher.discount}%):</Text>
+                <Text style={[styles.summaryValue, styles.discountValue]}>-₱{getDiscountAmount().toFixed(2)}</Text>
+              </View>
+            )}
+            
+            <View style={[styles.summaryRow, styles.totalRow]}>
+              <Text style={styles.totalLabel}>Total:</Text>
+              <Text style={styles.totalAmount}>₱{getFinalTotal().toFixed(2)}</Text>
+            </View>
+          </View>
         </View>
         
         <TouchableOpacity 
@@ -252,7 +362,7 @@ const Checkout = ({ navigation, route }) => {
                     style={[styles.button, styles.updateButton]}
                     onPress={handleSelectAddress}
                   >
-                   <Text style={[styles.buttonText, { color: COLORS.white }]}>Use This Address</Text>
+                    <Text style={[styles.buttonText, { color: COLORS.white }]}>Use This Address</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -267,6 +377,109 @@ const Checkout = ({ navigation, route }) => {
                 </TouchableOpacity>
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Voucher Modal */}
+      <Modal
+        visible={voucherModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setVoucherModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Voucher</Text>
+            
+            <FlatList
+              data={availableVouchers}
+              keyExtractor={item => item.id.toString()}
+              renderItem={({item}) => (
+                <TouchableOpacity 
+                  style={styles.voucherItem}
+                  onPress={() => handleSelectVoucher(item)}
+                >
+                  <View style={styles.voucherItemContent}>
+                    <Icon name="local-offer" size={24} color={COLORS.primary} style={{marginRight: 15}} />
+                    <View>
+                      <Text style={styles.voucherItemCode}>{item.code}</Text>
+                      <Text style={styles.voucherItemDesc}>{item.description}</Text>
+                      <Text style={styles.voucherItemDiscount}>{item.discount}% off</Text>
+                    </View>
+                  </View>
+                  {selectedVoucher?.id === item.id && (
+                    <Icon name="check-circle" size={24} color={COLORS.primary} />
+                  )}
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.voucherSeparator} />}
+              style={styles.voucherList}
+            />
+            
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => setVoucherModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.button, styles.updateButton]}
+                onPress={() => setVoucherModalVisible(false)}
+              >
+                <Text style={[styles.buttonText, { color: COLORS.white }]}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Payment Method Modal */}
+      <Modal
+        visible={paymentModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setPaymentModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Payment Method</Text>
+            
+            <View style={styles.paymentOptionsList}>
+              {paymentMethods.map((method) => (
+                <TouchableOpacity
+                  key={method.id}
+                  style={[
+                    styles.paymentOption,
+                    selectedPayment?.id === method.id && styles.selectedPaymentOption
+                  ]}
+                  onPress={() => handleSelectPayment(method)}
+                >
+                  <Icon 
+                    name={method.icon} 
+                    size={28} 
+                    color={selectedPayment?.id === method.id ? COLORS.white : COLORS.primary}
+                  />
+                  <Text 
+                    style={[
+                      styles.paymentOptionText,
+                      selectedPayment?.id === method.id && styles.selectedPaymentText
+                    ]}
+                  >
+                    {method.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <TouchableOpacity
+              style={[styles.button, styles.fullWidthButton, styles.updateButton]}
+              onPress={() => setPaymentModalVisible(false)}
+            >
+              <Text style={[styles.buttonText, { color: COLORS.white }]}>Confirm</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

@@ -271,4 +271,161 @@ addressHeader: {
     fontWeight: 'bold',
     color: COLORS.textDark || '#333',
   },
+  // Add these new styles to your StyleSheet
+
+// Voucher styles
+voucherSelected: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  voucherInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  voucherIcon: {
+    marginRight: 10,
+  },
+  voucherCode: {
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  voucherDiscount: {
+    color: COLORS.primary,
+    marginTop: 2,
+  },
+  voucherButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+  },
+  voucherButtonText: {
+    marginLeft: 8,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  voucherItem: {
+    padding: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  voucherItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  voucherItemCode: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  voucherItemDesc: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    marginTop: 2,
+  },
+  voucherItemDiscount: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  voucherSeparator: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginVertical: 4,
+  },
+  voucherList: {
+    maxHeight: 300,
+    marginBottom: 15,
+  },
+  
+  // Payment method styles
+  paymentSelected: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  paymentIcon: {
+    marginRight: 10,
+  },
+  changePaymentButton: {
+    marginLeft: 'auto',
+    padding: 6,
+  },
+  changePaymentText: {
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  paymentOptionsList: {
+    marginVertical: 15,
+  },
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  selectedPaymentOption: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  paymentOptionText: {
+    marginLeft: 15,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  selectedPaymentText: {
+    color: COLORS.white,
+  },
+  fullWidthButton: {
+    width: '100%',
+    marginTop: 10,
+  },
+  orderSummary: {
+    marginTop: 10,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  summaryLabel: {
+    fontSize: 15,
+    color: COLORS.textLight,
+  },
+  summaryValue: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  discountValue: {
+    color: '#e53935',  
+  },
+  totalRow: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
