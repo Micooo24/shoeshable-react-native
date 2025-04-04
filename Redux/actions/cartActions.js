@@ -5,6 +5,7 @@ import {
     GET_CART,
     UPDATE_CART_ITEM,
     UPDATE_CART_QUANTITY,
+    REMOVE_MULTIPLE_FROM_CART  
 } from '../constants';
 import baseURL from '../../assets/common/baseurl';
 import axios from 'axios';
@@ -15,7 +16,8 @@ import {
     updateCartItemInDatabase,
     updateCartItemQuantityInDatabase,
     removeCartItemFromDatabase,
-    clearCartFromDatabase
+    clearCartFromDatabase,
+    removeMultipleCartItemsFromDatabase 
 } from '../../sqlite_db/Cart';
 import  { jwtDecode }from 'jwt-decode';
 
@@ -388,3 +390,48 @@ export const removeFromCart = (productId) => {
       }
     };
   };
+
+  
+// SQLite-Only Remove Multiple Cart Items Action
+export const removeMultipleFromCart = (productIds) => {
+  return async (dispatch) => {
+    try {
+      const tokenData = await getToken();
+      const authToken = tokenData?.authToken;
+
+      if (!authToken) {
+        return {
+          success: false,
+          message: 'Unauthorized. Please log in to remove items from the cart.',
+        };
+      }
+
+      // Get userId from token
+      const decoded = jwtDecode(authToken);
+      const userId = decoded.userId || decoded.id;
+      
+      console.log(`Removing ${productIds.length} items from local database for user: ${userId}`);
+      
+      // Remove from local database only
+      await removeMultipleCartItemsFromDatabase(userId, productIds);
+      
+      // Dispatch the removal action to update Redux store
+      dispatch({
+        type: REMOVE_MULTIPLE_FROM_CART,
+        payload: productIds,
+      });
+
+      return {
+        success: true,
+        message: `${productIds.length} items removed from cart locally.`,
+        offline: true
+      };
+    } catch (error) {
+      console.error('Error removing multiple items from cart:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to remove items from cart.',
+      };
+    }
+  };
+};

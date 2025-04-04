@@ -17,6 +17,10 @@ export const GET_CART = 'GET_CART';
 export const UPDATE_CART_ITEM = 'UPDATE_CART_ITEM';
 export const UPDATE_CART_QUANTITY = 'UPDATE_CART_QUANTITY';
 
+
+//After Checkout
+export const REMOVE_MULTIPLE_FROM_CART = 'REMOVE_MULTIPLE_FROM_CART';
+
 // Order Operations
 export const CREATE_ORDER = 'CREATE_ORDER';
 export const GET_ORDER = 'GET_ORDER';

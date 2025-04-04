@@ -5,6 +5,7 @@ import {
     UPDATE_CART_QUANTITY, 
     REMOVE_FROM_CART,
     CLEAR_CART,
+    REMOVE_MULTIPLE_FROM_CART 
 } from '../constants';
 
 const initialState = {
@@ -149,6 +150,27 @@ export const cartReducer = (state = initialState, action) => {
 
             // Filter out the item to be removed
             const updatedCartItems = state.cartItems.filter(item => getProductId(item) !== productId);
+
+            // Recalculate total quantity and total price
+            const totalQuantity = updatedCartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            const totalPrice = updatedCartItems.reduce((sum, item) => sum + getItemPrice(item) * (item.quantity || 1), 0);
+
+            return {
+                ...state,
+                cartItems: updatedCartItems,
+                totalQuantity,
+                totalPrice,
+            };
+        }
+        
+        case REMOVE_MULTIPLE_FROM_CART: {
+            const productIds = action.payload;
+            
+            // Filter out all items with IDs in the productIds array
+            const updatedCartItems = state.cartItems.filter(item => {
+                const currentItemId = getProductId(item);
+                return !productIds.includes(currentItemId);
+            });
 
             // Recalculate total quantity and total price
             const totalQuantity = updatedCartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);

@@ -342,3 +342,40 @@ export const clearCartFromDatabase = async (userId) => {
     throw error;
   }
 };
+
+
+/**
+ * Remove multiple items from the cart by their product IDs
+ * @param {string} userId - User ID
+ * @param {array} productIds - Array of product IDs to remove
+ * @returns {Promise<boolean>} - True if successful
+ */
+export const removeMultipleCartItemsFromDatabase = async (userId, productIds) => {
+  try {
+    if (!userId || !productIds || productIds.length === 0) {
+      console.warn('No items to remove');
+      return false;
+    }
+    
+    const db = await getDatabase();
+    
+    // Use prepared statement with multiple placeholders for each ID
+    const placeholders = productIds.map(() => '?').join(',');
+    
+    // Construct the query with userId and multiple product_id conditions
+    const query = `DELETE FROM cart WHERE user_id = ? AND product_id IN (${placeholders})`;
+    
+    // Build params array with userId first, followed by all productIds
+    const params = [userId, ...productIds];
+    
+    console.log(`Removing ${productIds.length} items from cart for user ${userId}`);
+    
+    // Execute the query
+    await db.executeSql(query, params);
+    
+    return true;
+  } catch (error) {
+    console.error('Error removing multiple cart items from database:', error);
+    throw error;
+  }
+};
