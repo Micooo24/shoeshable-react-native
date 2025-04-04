@@ -54,7 +54,7 @@ const orderSchema = mongoose.Schema({
                 type: Number,
                 required: true
             },
-            product: {
+            productId: {
                 type: mongoose.Schema.Types.ObjectId,
                 required: true,
                 ref: 'Product'
@@ -100,7 +100,8 @@ const orderSchema = mongoose.Schema({
         enum: ['Processing', 'Shipped', 'Delivered', 'Cancelled']
     },
     paidAt: {
-        type: Date
+        type: Date,
+        default: Date.now
     },
     deliveredAt: {
         type: Date

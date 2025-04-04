@@ -49,7 +49,7 @@ exports.getSingleOrder = async (req, res) => {
         const order = await Order.findById(req.params.id)
             .populate('user', 'name email')
             .populate({
-                path: 'orderItems.product',
+                path: 'orderItems.productId',
                 select: 'name category brand'
             });
 

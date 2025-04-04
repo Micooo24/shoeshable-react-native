@@ -9,8 +9,15 @@ import { styles } from '../../Styles/checkout';
 import baseURL from '../../assets/common/baseurl';
 import axios from 'axios';
 import { getToken } from '../../sqlite_db/Auth';
+import { useDispatch } from 'react-redux';
+import { createOrder } from '../../Redux/actions/orderActions';
+
 
 const Checkout = ({ navigation, route }) => {
+  //Redux orders
+  const dispatch = useDispatch();
+  const [placingOrder, setPlacingOrder] = useState(false);
+
   // Extract parameters passed from Cart screen
   const { cartItems, subtotal, userId } = route.params || {};
   
@@ -122,6 +129,95 @@ const Checkout = ({ navigation, route }) => {
   const handleSelectPayment = (payment) => {
     setSelectedPayment(payment);
     setPaymentModalVisible(false);
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!selectedAddress || !cartItems || cartItems.length === 0) {
+      return;
+    }
+  
+    try {
+      setPlacingOrder(true);
+      
+      // Debug log to see cart structure
+      console.log("Cart items:", cartItems);
+      
+      // Check if cart items have valid product IDs
+      const missingProductIds = cartItems.some(item => !item.product_id);
+      if (missingProductIds) {
+        Alert.alert(
+          "Missing Product Information",
+          "Some products in your cart are missing required information. Please try again."
+        );
+        return;
+      }
+      
+      // Prepare order data for submission
+      const orderData = {
+        shippingInfo: {
+          firstName: selectedAddress.firstName,
+          lastName: selectedAddress.lastName,
+          address: selectedAddress.address,
+          phoneNumber: selectedAddress.phoneNumber,
+          zipCode: selectedAddress.zipCode
+        },
+        orderItems: cartItems.map(item => ({
+          productName: item.productName || "Product",
+          size: item.size || 'N/A',
+          color: item.color || 'N/A',
+          quantity: item.quantity || 1,
+          productImage: item.productImage && item.productImage.length > 0 ? item.productImage[0] : '',
+          productPrice: item.productPrice || 0,
+          productId: item.product_id
+        })),
+        paymentInfo: {
+          method: selectedPayment.name
+        },
+        subtotal: subtotal || 0,
+        shippingFee,
+        totalPrice: getFinalTotal(),
+        // Set paidAt based on payment method
+        paidAt: new Date().toISOString()
+      };
+      
+      // Add voucher information if a voucher is selected
+      if (selectedVoucher) {
+        orderData.voucher = {
+          code: selectedVoucher.code,
+          discount: selectedVoucher.discount
+        };
+        orderData.discountAmount = getDiscountAmount();
+      }
+      
+      console.log("Sending order data:", JSON.stringify(orderData, null, 2));
+      
+      // Dispatch the create order action
+      const result = await dispatch(createOrder(orderData));
+      
+      // Handle successful order creation
+      Alert.alert(
+        "Order Placed Successfully", 
+        "Your order has been submitted and will be processed shortly.",
+        [
+          { 
+            text: "View Orders", 
+            onPress: () => navigation.navigate('Orders') 
+          },
+          { 
+            text: "Continue Shopping", 
+            onPress: () => navigation.navigate('Home') 
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to place order:', error);
+      Alert.alert(
+        "Order Failed", 
+        error.message || "There was an issue placing your order. Please try again."
+      );
+    } finally {
+      setPlacingOrder(false);
+    }
   };
 
   return (
@@ -298,15 +394,19 @@ const Checkout = ({ navigation, route }) => {
         </View>
         
         <TouchableOpacity 
-          style={[
-            styles.paymentButton,
-            (!selectedAddress || !cartItems || cartItems.length === 0) && styles.disabledButton
-          ]}
-          disabled={!selectedAddress || !cartItems || cartItems.length === 0}
-          onPress={() => Alert.alert("Order Placed", "Your order has been submitted successfully!")}
-        >
-          <Text style={styles.paymentButtonText}>Place Order</Text>
-        </TouchableOpacity>
+            style={[
+              styles.paymentButton,
+              (placingOrder || !selectedAddress || !cartItems || cartItems.length === 0) && styles.disabledButton
+            ]}
+            disabled={placingOrder || !selectedAddress || !cartItems || cartItems.length === 0}
+            onPress={handlePlaceOrder}
+          >
+            {placingOrder ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Text style={styles.paymentButtonText}>Place Order</Text>
+            )}
+          </TouchableOpacity>
       </ScrollView>
 
       {/* Address Modal */}
