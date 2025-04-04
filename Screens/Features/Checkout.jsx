@@ -1,11 +1,78 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, Text, ScrollView, SafeAreaView, TouchableOpacity, 
+  Image, Modal, ActivityIndicator, Alert 
+} from 'react-native';
 import { COLORS } from '../../Theme/color';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { styles } from '../../Styles/checkout';
+import baseURL from '../../assets/common/baseurl';
+import axios from 'axios';
+import { getToken } from '../../sqlite_db/Auth';
 
 const Checkout = ({ navigation, route }) => {
   // Extract parameters passed from Cart screen
   const { cartItems, subtotal, userId } = route.params || {};
+  
+  // State for address modal
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+
+  // Fetch user profile data
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true);
+      
+      // Get the auth token
+      const tokenData = await getToken();
+      if (!tokenData || !tokenData.authToken) {
+        Alert.alert("Authentication Error", "Please login to continue");
+        return;
+      }
+      
+      // Make API request with auth token
+      const response = await axios.get(`${baseURL}/api/auth/profile`, {
+        headers: { Authorization: `Bearer ${tokenData.authToken}` }
+      });
+      
+      if (response.data && response.data.success && response.data.user) {
+        const { firstName, lastName, phoneNumber, address, zipCode } = response.data.user;
+        
+        // Set user profile data
+        setUserProfile({
+          firstName,
+          lastName,
+          phoneNumber,
+          address,
+          zipCode
+        });
+        
+        console.log("User profile fetched:", { firstName, lastName, phoneNumber, address, zipCode });
+      } else {
+        console.error("Invalid response format", response.data);
+        Alert.alert("Error", "Failed to fetch address information");
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      Alert.alert("Error", "Failed to fetch address information");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle address selection
+  const handleSelectAddress = () => {
+    setSelectedAddress(userProfile);
+    setAddressModalVisible(false);
+  };
+  
+  // Open address modal and fetch user data
+  const openAddressModal = () => {
+    setAddressModalVisible(true);
+    fetchUserProfile();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -25,13 +92,27 @@ const Checkout = ({ navigation, route }) => {
             <View>
               {cartItems.map((item, index) => (
                 <View key={index} style={styles.cartItem}>
-                  <Text style={styles.itemName}>{item.productId?.name || "Product"}</Text>
-                  <Text>Size: {item.size || 'N/A'}</Text>
-                  <Text>Color: {item.color || 'N/A'}</Text>
-                  <Text>Quantity: {item.quantity || 1}</Text>
-                  <Text style={styles.itemPrice}>
-                    ₱{((item.productId?.price || 0) * (item.quantity || 1)).toFixed(2)}
-                  </Text>
+                  <View style={styles.itemHeader}>
+                    {/* Display the product image if available */}
+                    {item.productImage && item.productImage.length > 0 && (
+                      <Image 
+                        source={{ uri: item.productImage[0] }} 
+                        style={styles.productImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    <View style={styles.itemDetails}>
+                      {/* Use the enhanced productName property */}
+                      <Text style={styles.itemName}>{item.productName || "Product"}</Text>
+                      <Text style={styles.itemMeta}>Size: {item.size || 'N/A'}</Text>
+                      <Text style={styles.itemMeta}>Color: {item.color || 'N/A'}</Text>
+                      <Text style={styles.itemQuantity}>Quantity: {item.quantity || 1}</Text>
+                      {/* Use the enhanced productPrice property */}
+                      <Text style={styles.itemPrice}>
+                        ₱{((item.productPrice || 0) * (item.quantity || 1)).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               ))}
               
@@ -45,97 +126,152 @@ const Checkout = ({ navigation, route }) => {
           )}
         </View>
         
-        {/* Add more checkout sections here */}
+        {/* Shipping Address Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Shipping Address</Text>
+          
+          {selectedAddress ? (
+            <View style={styles.addressSaved}>
+              {/* User's full name at the top */}
+              <View style={styles.addressHeader}>
+                <Icon name="person" size={22} color={COLORS.primary} style={styles.addressIcon} />
+                <Text style={styles.addressName}>
+                  {selectedAddress.firstName} {selectedAddress.lastName}
+                </Text>
+              </View>
+              
+              {/* Physical address with icon */}
+              <View style={styles.addressRow}>
+                <Icon name="location-on" size={22} color={COLORS.primary} style={styles.addressIcon} />
+                <Text style={styles.addressDetails}>{selectedAddress.address}</Text>
+              </View>
+              
+              {/* Zip code with icon */}
+              <View style={styles.addressRow}>
+                <Icon name="markunread-mailbox" size={22} color={COLORS.primary} style={styles.addressIcon} />
+                <Text style={styles.addressDetails}>Zip Code: {selectedAddress.zipCode}</Text>
+              </View>
+              
+              {/* Phone with icon */}
+              <View style={styles.addressRow}>
+                <Icon name="phone" size={22} color={COLORS.primary} style={styles.addressIcon} />
+                <Text style={styles.addressDetails}>{selectedAddress.phoneNumber}</Text>
+              </View>
+              
+              {/* Change address button */}
+              <TouchableOpacity 
+                style={[styles.addressButton, {marginTop: 15}]}
+                onPress={openAddressModal}
+              >
+                <Icon name="edit" size={20} color={COLORS.primary} />
+                <Text style={styles.addressButtonText}>Change Address</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.addressButton}
+              onPress={openAddressModal}
+            >
+              <Icon name="add-location" size={20} color={COLORS.primary} />
+              <Text style={styles.addressButtonText}>Add Shipping Address</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         
-        <TouchableOpacity style={styles.paymentButton}>
-          <Text style={styles.paymentButtonText}>Proceed to Payment</Text>
+        {/* Payment Method Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Method</Text>
+          <TouchableOpacity style={styles.paymentMethodButton}>
+            <Icon name="payment" size={20} color={COLORS.primary} />
+            <Text style={styles.paymentMethodText}>Cash on Delivery</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <TouchableOpacity 
+          style={[
+            styles.paymentButton,
+            (!selectedAddress || !cartItems || cartItems.length === 0) && styles.disabledButton
+          ]}
+          disabled={!selectedAddress || !cartItems || cartItems.length === 0}
+          onPress={() => Alert.alert("Order Placed", "Your order has been submitted successfully!")}
+        >
+          <Text style={styles.paymentButtonText}>Place Order</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Address Modal */}
+      <Modal
+        visible={addressModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setAddressModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Shipping Address</Text>
+            
+            {loading ? (
+              <ActivityIndicator size="large" color={COLORS.primary} style={{marginVertical: 20}} />
+            ) : userProfile ? (
+              <View style={styles.addressForm}>
+                {/* Separated first name and last name in modal */}
+                <View style={styles.formRow}>
+                  <Text style={styles.formLabel}>First Name:</Text>
+                  <Text style={styles.formValue}>{userProfile.firstName}</Text>
+                </View>
+                
+                <View style={styles.formRow}>
+                  <Text style={styles.formLabel}>Last Name:</Text>
+                  <Text style={styles.formValue}>{userProfile.lastName}</Text>
+                </View>
+                
+                <View style={styles.formRow}>
+                  <Text style={styles.formLabel}>Phone:</Text>
+                  <Text style={styles.formValue}>{userProfile.phoneNumber}</Text>
+                </View>
+                
+                <View style={styles.formRow}>
+                  <Text style={styles.formLabel}>Address:</Text>
+                  <Text style={styles.formValue}>{userProfile.address}</Text>
+                </View>
+                
+                <View style={styles.formRow}>
+                  <Text style={styles.formLabel}>Zip Code:</Text>
+                  <Text style={styles.formValue}>{userProfile.zipCode}</Text>
+                </View>
+                
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.cancelButton]}
+                    onPress={() => setAddressModalVisible(false)}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.button, styles.updateButton]}
+                    onPress={handleSelectAddress}
+                  >
+                   <Text style={[styles.buttonText, { color: COLORS.white }]}>Use This Address</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={{alignItems: 'center', padding: 20}}>
+                <Text>No address information found</Text>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton, {marginTop: 20}]}
+                  onPress={() => setAddressModalVisible(false)}
+                >
+                  <Text style={styles.buttonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background || '#f5f5f5',
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  section: {
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  cartItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingVertical: 10,
-  },
-  itemName: {
-    fontWeight: 'bold',
-  },
-  itemPrice: {
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  totalAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  emptyMessage: {
-    textAlign: 'center',
-    color: '#999',
-    marginVertical: 20,
-  },
-  paymentButton: {
-    backgroundColor: COLORS.primary,
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  paymentButtonText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});
 
 export default Checkout;
