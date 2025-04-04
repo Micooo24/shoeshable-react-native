@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { 
-  StyleSheet, 
   Text, 
   View, 
   StatusBar, 
@@ -8,44 +7,136 @@ import {
   Image,
   SafeAreaView,
   ScrollView,
-  Alert
+  Alert,
+  Modal,
+  TextInput,
+  ActivityIndicator
 } from "react-native";
 import BottomNavigator from "../../Navigators/BottomNavigator";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { getToken, removeToken } from "../../sqlite_db/Auth"; // Import auth functions
-
-const COLORS = {
-  primary: "#2c3e50", // Dark blue-gray
-  primaryLight: "#34495e", 
-  primaryDark: "#1a2530", // Darker blue-gray
-  white: "#ffffff", // Pure white
-  light: "#ecf0f1", // Light gray
-  grey: "#bdc3c7", // Medium gray
-  darkGrey: "#7f8c8d", // Darker gray
-  text: "#2c3e50", // Text in dark blue-gray
-  textLight: "#7f8c8d", // Light text in gray
-  success: "#2ecc71", // Success green
-  warning: "#f39c12", // Warning orange
-  danger: "#e74c3c", // Danger red
-  shadow: "rgba(44, 62, 80, 0.15)", // Shadow based on primary color
-  accent: "#3498db", // Accent blue
-};
+import { getToken, removeToken } from "../../sqlite_db/Auth";
+import axios from "axios";
+import baseURL from "../../assets/common/baseurl";
+import { styles, COLORS } from "../../Styles/profile";
 
 const Profile = ({ navigation }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState({ username: '', avatar: 'https://via.placeholder.com/150' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    address: '',
+    zipCode: ''
+  });
 
-  // Check login status when component mounts
+  const purchaseStatuses = [
+    { title: "To Pay", icon: "credit-card-outline" },
+    { title: "To Ship", icon: "package-variant-closed" },
+    { title: "To Deliver", icon: "truck-delivery-outline" },
+    { title: "To Rate", icon: "star-outline" },
+  ];
+
+  // Function to fetch user profile data
+  const fetchUserProfile = async (token) => {
+    try {
+      setIsLoading(true);
+      
+      const response = await axios.get(`${baseURL}/api/auth/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        const user = response.data.user;
+        
+        // Update user data state with response
+        setUserData({
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          address: user.address,
+          zipCode: user.zipCode,
+          avatar: user.profileImage?.url || 'https://via.placeholder.com/150'
+        });
+        
+        // Also initialize the form data for editing
+        setProfileForm({
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          phoneNumber: user.phoneNumber?.toString() || '',
+          address: user.address || '',
+          zipCode: user.zipCode?.toString() || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      Alert.alert('Error', 'Failed to load profile data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Function to update user profile
+  const updateProfile = async () => {
+    try {
+      setIsLoading(true);
+      
+      const tokenData = await getToken();
+      if (!tokenData || !tokenData.authToken) {
+        Alert.alert('Error', 'You need to be logged in to update your profile');
+        return;
+      }
+      
+      // Convert phone number and zip code to numbers if they're numeric strings
+      const formattedData = {
+        ...profileForm,
+        phoneNumber: parseInt(profileForm.phoneNumber, 10),
+        zipCode: parseInt(profileForm.zipCode, 10)
+      };
+      
+      const response = await axios.put(
+        `${baseURL}/api/auth/profile/update`,
+        formattedData,
+        {
+          headers: {
+            Authorization: `Bearer ${tokenData.authToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        Alert.alert('Success', 'Profile updated successfully');
+        // Refresh profile data
+        fetchUserProfile(tokenData.authToken);
+        setIsModalVisible(false);
+      } else {
+        Alert.alert('Error', response.data?.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check login status and fetch profile when component mounts
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        const loggedInUser = await getToken();
-        if (loggedInUser) {
+        const tokenData = await getToken();
+        if (tokenData && tokenData.authToken) {
           setIsLoggedIn(true);
-          setUserData({
-            username: loggedInUser.email,
-            avatar: 'https://via.placeholder.com/150' // Placeholder avatar
-          });
+          // Fetch user profile data
+          fetchUserProfile(tokenData.authToken);
         } else {
           setIsLoggedIn(false);
         }
@@ -58,19 +149,12 @@ const Profile = ({ navigation }) => {
     checkLoginStatus();
   }, []);
 
-  const purchaseStatuses = [
-    { title: "To Pay", icon: "credit-card-outline" },
-    { title: "To Ship", icon: "package-variant-closed" },
-    { title: "To Deliver", icon: "truck-delivery-outline" },
-    { title: "To Rate", icon: "star-outline" },
-  ];
-
   const handleLoginPress = () => {
-    navigation.navigate('Auth', { screen: 'Login' }) // Navigate to your login screen
+    navigation.navigate('Auth', { screen: 'Login' });
   };
   
   const handleRegisterPress = () => {
-    navigation.navigate('Auth', { screen: 'Register' })
+    navigation.navigate('Auth', { screen: 'Register' });
   };
 
   const handleLogout = async () => {
@@ -83,30 +167,50 @@ const Profile = ({ navigation }) => {
       Alert.alert('Error', 'Failed to log out. Please try again.');
     }
   };
+  
+  // Handle opening the profile edit modal
+  const handleEditProfile = () => {
+    setIsModalVisible(true);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
-      {/* Streamlined Header Section */}
+      {/* Header Section */}
       <View style={styles.header}>
         {isLoggedIn ? (
           <View style={styles.userInfoContainer}>
-            <Image
-              source={{ uri: userData.avatar }}
-              style={styles.avatar}
-            />
+            {isLoading ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Image
+                source={{ uri: userData.avatar }}
+                style={styles.avatar}
+              />
+            )}
             <View style={styles.userTextContainer}>
               <Text style={styles.welcomeText}>Welcome back</Text>
-              <Text style={styles.username}>{userData.username}</Text>
+              <Text style={styles.username}>
+                {userData.firstName ? `${userData.firstName} ${userData.lastName}` : userData.username}
+              </Text>
             </View>
-            <TouchableOpacity 
-              style={styles.logoutButton}
-              onPress={handleLogout}
-            >
-              <Icon name="logout" size={20} color={COLORS.white} />
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
+            <View style={{flexDirection: 'row'}}>
+              <TouchableOpacity 
+                style={styles.editProfileButton}
+                onPress={handleEditProfile}
+              >
+                <Icon name="account-edit" size={20} color={COLORS.white} />
+                <Text style={styles.editProfileText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.logoutButton, {marginLeft: 8}]}
+                onPress={handleLogout}
+              >
+                <Icon name="logout" size={20} color={COLORS.white} />
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <View style={styles.authContainer}>
@@ -137,6 +241,51 @@ const Profile = ({ navigation }) => {
       {/* Scrollable Content Section */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
+          {isLoggedIn && (
+            <View style={styles.purchasesContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleWrapper}>
+                  <Icon name="account-details" size={20} color={COLORS.primary} />
+                  <Text style={styles.sectionTitle}>Profile Information</Text>
+                </View>
+              </View>
+              
+              <View style={{marginTop: 8}}>
+                <View style={styles.profileInfoRow}>
+                  <Icon name="account" size={18} color={COLORS.primary} style={{marginRight: 8}} />
+                  <Text style={styles.profileLabel}>Name:</Text>
+                  <Text style={styles.profileValue}>
+                    {userData.firstName} {userData.lastName}
+                  </Text>
+                </View>
+                
+                <View style={styles.profileInfoRow}>
+                  <Icon name="email" size={18} color={COLORS.primary} style={{marginRight: 8}} />
+                  <Text style={styles.profileLabel}>Email:</Text>
+                  <Text style={styles.profileValue}>{userData.email}</Text>
+                </View>
+                
+                <View style={styles.profileInfoRow}>
+                  <Icon name="phone" size={18} color={COLORS.primary} style={{marginRight: 8}} />
+                  <Text style={styles.profileLabel}>Phone:</Text>
+                  <Text style={styles.profileValue}>{userData.phoneNumber}</Text>
+                </View>
+                
+                <View style={styles.profileInfoRow}>
+                  <Icon name="map-marker" size={18} color={COLORS.primary} style={{marginRight: 8}} />
+                  <Text style={styles.profileLabel}>Address:</Text>
+                  <Text style={styles.profileValue}>{userData.address}</Text>
+                </View>
+                
+                <View style={styles.profileInfoRow}>
+                  <Icon name="zip-box" size={18} color={COLORS.primary} style={{marginRight: 8}} />
+                  <Text style={styles.profileLabel}>Zip Code:</Text>
+                  <Text style={styles.profileValue}>{userData.zipCode}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+          
           {/* My Purchases Section */}
           <View style={styles.purchasesContainer}>
             <View style={styles.sectionHeaderRow}>
@@ -232,6 +381,94 @@ const Profile = ({ navigation }) => {
         </View>
       </ScrollView>
 
+      {/* Profile Edit Modal */}
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+            
+            {isLoading ? (
+              <ActivityIndicator size="large" color={COLORS.primary} style={{marginVertical: 20}} />
+            ) : (
+              <>
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>First Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.firstName}
+                    onChangeText={(text) => setProfileForm({...profileForm, firstName: text})}
+                    placeholder="First Name"
+                  />
+                </View>
+                
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Last Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.lastName}
+                    onChangeText={(text) => setProfileForm({...profileForm, lastName: text})}
+                    placeholder="Last Name"
+                  />
+                </View>
+                
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Phone Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.phoneNumber}
+                    onChangeText={(text) => setProfileForm({...profileForm, phoneNumber: text})}
+                    placeholder="Phone Number"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Address</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.address}
+                    onChangeText={(text) => setProfileForm({...profileForm, address: text})}
+                    placeholder="Address"
+                  />
+                </View>
+                
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Zip Code</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.zipCode}
+                    onChangeText={(text) => setProfileForm({...profileForm, zipCode: text})}
+                    placeholder="Zip Code"
+                    keyboardType="number-pad"
+                  />
+                </View>
+                
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.cancelButton]}
+                    onPress={() => setIsModalVisible(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.button, styles.saveButton]}
+                    onPress={updateProfile}
+                  >
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* Bottom Navigation */}
       <View style={styles.bottomNavContainer}>
         <BottomNavigator navigation={navigation} activeScreen="Profile" />
@@ -241,244 +478,3 @@ const Profile = ({ navigation }) => {
 };
 
 export default Profile;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.light,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    elevation: 4,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  userInfoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: COLORS.white,
-  },
-  userTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  welcomeText: {
-    color: COLORS.light,
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  username: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  settingsButton: {
-    padding: 6,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.danger,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 6,
-    elevation: 1,
-  },
-  logoutText: {
-    color: COLORS.white,
-    fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 4,
-  },
-  authContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  authTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  authText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  authButtonsContainer: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  authButton: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 6,
-    elevation: 1,
-  },
-  registerButton: {
-    backgroundColor: COLORS.white,
-  },
-  authButtonText: {
-    color: COLORS.white,
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  registerButtonText: {
-    color: COLORS.accent,
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 80, // Extra padding at bottom for the nav bar
-  },
-  purchasesContainer: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  sectionTitleWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: COLORS.text,
-    marginLeft: 8,
-  },
-  viewAllText: {
-    color: COLORS.accent,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  purchaseStatusRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statusItem: {
-    alignItems: "center",
-    width: "23%",
-  },
-  statusIconContainer: {
-    backgroundColor: COLORS.light,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    elevation: 1,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  statusText: {
-    fontSize: 12,
-    color: COLORS.text,
-    textAlign: "center",
-    fontWeight: "500",
-  },
-  ordersList: {
-    marginTop: 4,
-  },
-  orderItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  orderIconBg: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  orderDetails: {
-    flex: 1,
-  },
-  orderTitle: {
-    fontSize: 14,
-    color: COLORS.text,
-    fontWeight: "600",
-  },
-  orderSubtitle: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    marginTop: 2,
-  },
-  orderPrice: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.primary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.light,
-    marginVertical: 4,
-  },
-  wishlistPreview: {
-    alignItems: "center",
-    paddingVertical: 16,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: COLORS.darkGrey,
-    marginBottom: 12,
-  },
-  browseButton: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  browseButtonText: {
-    color: COLORS.white,
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  emptySpace: {
-    height: 40,
-  },
-  bottomNavContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.white,
-    elevation: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.light,
-  },
-});
