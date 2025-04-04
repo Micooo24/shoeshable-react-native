@@ -12,6 +12,7 @@ const app = express();
 const productRoutes = require('./routes/products');
 const authRoutes = require("./routes/auth");
 const cartRoutes = require('./routes/carts');  
+const orderRoutes = require('./routes/orders'); 
 
 // Mongoose
 mongoose
@@ -44,6 +45,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 
 app.use("/api/cart", cartRoutes); // Use the cart routes
+app.use("/api/orders", orderRoutes); // Use the order routes
 
 app.use((req, res, next) => {
     res.status(404).json({ message: 'Route not found' });

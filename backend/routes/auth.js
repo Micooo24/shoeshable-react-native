@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { Register, Login, googleLogin, getUserData, updateProfile} = require('../controllers/Auth');
-const { isAuthenticatedUser } = require("../middlewares/auth");
+const { isAuthenticatedUser } = require("../middlewares/Auth");
 const upload = require("../utils/multer");
 
 
