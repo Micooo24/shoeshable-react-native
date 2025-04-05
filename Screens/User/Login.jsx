@@ -67,14 +67,23 @@ const Login = ({ navigation }) => {
       });
   
       // 6. Handle backend response
-      const { token } = response.data;
+      const { token, user: userData } = response.data;
       console.log('Backend response:', response.data);
+      console.log('User role:', userData?.role);
   
       // Save the token locally
       await saveToken(token, email);
   
       setLoading(false);
-      navigation.navigate('Home'); // Navigate to the next screen
+      
+      // Check if the user is an admin and navigate accordingly
+      if (userData && userData.role === 'admin') {
+        console.log('Admin user detected, navigating to AdminNavigator');
+        navigation.navigate('AdminNavigator', { screen: 'Dashboard' });
+      } else {
+        console.log('Regular user detected, navigating to Home');
+        navigation.navigate('Home');
+      }
     } catch (error) {
       setLoading(false);
       console.error('Google Sign-In Error:', error);
@@ -93,6 +102,7 @@ const Login = ({ navigation }) => {
       Alert.alert('Error', errorMessage);
     }
   };
+
   const handleLogin = async () => {
     if (!formData.email || !formData.password) {
       Alert.alert('Error', 'Please enter both email and password');
@@ -108,14 +118,24 @@ const Login = ({ navigation }) => {
         password: formData.password,
       });
 
-      // Extract the token from the response
-      const { token } = response.data;
+      // Extract the token and user data from the response
+      const { token, user } = response.data;
+      console.log('Login response:', response.data);
+      console.log('User role:', user?.role);
 
       // Save the token and email locally
       await saveToken(token, formData.email);
 
       setLoading(false);
-      navigation.navigate('Home'); // Navigate to the next screen
+      
+      // Check if the user is an admin and navigate accordingly
+      if (user && user.role === 'admin') {
+        console.log('Admin user detected, navigating to AdminNavigator');
+        navigation.navigate('AdminNavigator', { screen: 'Dashboard' });
+      } else {
+        console.log('Regular user detected, navigating to Home');
+        navigation.navigate('Home');
+      }
     } catch (error) {
       setLoading(false);
       console.error('Login Error:', error);
@@ -165,13 +185,6 @@ const Login = ({ navigation }) => {
             value={formData.password}
           />
         </View>
-
-        <TouchableOpacity
-          style={styles.forgotPassword}
-          onPress={() => navigation.navigate('ForgotPassword')}
-        >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}

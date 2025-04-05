@@ -569,4 +569,14 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
   },
+
+  productGrid: {
+    padding: 10,
+    paddingBottom: 100, // Added extra padding for bottom navigator
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 220, // Increased from 180 to 220
+  },
 });

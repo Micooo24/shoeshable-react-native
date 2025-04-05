@@ -71,8 +71,7 @@ const userSchema = new mongoose.Schema({
         type: String, 
         enum: ['admin', 'user'], 
         default: 'user'
-    },  
-    
+    },   
 });
 
 userSchema.methods.getJwtToken = function () {

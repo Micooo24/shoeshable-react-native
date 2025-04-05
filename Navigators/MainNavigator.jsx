@@ -2,13 +2,13 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from '../Screens/Home'; // Import Home screen
 import AuthNavigator from './AuthNavigator';
-import Product from '../Screens/Product/Product';
 import SingleProduct from '../Screens/Product/SingleProduct';
 import BottomNavigator from './BottomNavigator';
 import Cart from "../Screens/Features/Cart";
 import Category from "../Screens/Features/Category";
 import Trends from "../Screens/Features/Trends";
 import Checkout from "../Screens/Features/Checkout";
+import AdminNavigator from "./AdminDrawer"; // Import AdminDrawer if needed
 
 const Stack = createNativeStackNavigator();
 
@@ -30,9 +30,9 @@ const MainNavigator = () => {
         component={BottomNavigator}
         options={{ headerShown: false }}
       />
-       <Stack.Screen 
-        name="Product" 
-        component={Product}
+      <Stack.Screen 
+        name="AdminNavigator" 
+        component={AdminNavigator}
         options={{ headerShown: false }}
       />
       <Stack.Screen name="SingleProduct" component={SingleProduct}

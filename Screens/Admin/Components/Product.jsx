@@ -24,19 +24,21 @@ import {
   updateProduct, 
   deleteProduct,
   fetchEnumValues 
-} from '../../Redux/actions/productActions';
+} from '../../../Redux/actions/productActions';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { 
   MaterialIcons,
   Feather,
   MaterialCommunityIcons,
   FontAwesome5,
   FontAwesome,
-  Ionicons
+  Ionicons,
 } from '@expo/vector-icons';
-import { styles } from '../../Styles/product.js';
-import { COLORS } from '../../Theme/color.js';
+import { styles } from '../../../Styles/product.js';
+import { COLORS } from '../../../Theme/color.js';
+import { getBrandIcon, getCategoryIcon, getGenderIcon } from '../../../Utils/Icons/ProductIcons';
 
 const ProductScreen = () => {
   const dispatch = useDispatch();
@@ -376,56 +378,6 @@ const ProductScreen = () => {
     );
   };
 
-  // Use dynamic values from backend enums for icon selections
-  const getCategoryIcon = (category) => {
-    const categoryValues = Object.values(SHOE_CATEGORIES);
-    
-    switch (category) {
-      case categoryValues.find(c => c === 'running'):
-        return <MaterialCommunityIcons name="run" size={16} color={COLORS.primary} />;
-      case categoryValues.find(c => c === 'basketball'):
-        return <MaterialCommunityIcons name="basketball" size={16} color={COLORS.primary} />;
-      case categoryValues.find(c => c === 'casual'):
-        return <FontAwesome5 name="shoe-prints" size={16} color={COLORS.primary} />;
-      case categoryValues.find(c => c === 'formal'):
-        return <MaterialCommunityIcons name="tie" size={16} color={COLORS.primary} />;
-      case categoryValues.find(c => c === 'boots'):
-        return <MaterialCommunityIcons name="boot-outline" size={16} color={COLORS.primary} />;
-      case categoryValues.find(c => c === 'sandals'):
-        return <MaterialCommunityIcons name="shoe-sandal" size={16} color={COLORS.primary} />;
-      default:
-        return <MaterialCommunityIcons name="shoe-sneaker" size={16} color={COLORS.primary} />;
-    }
-  };
-
-  const getBrandIcon = (brand) => {
-    const brandValues = Object.values(SHOE_BRANDS);
-    
-    switch (brand) {
-      case brandValues.find(b => b === 'nike'):
-        return <FontAwesome5 name="nike" size={16} color={COLORS.primary} />;
-      case brandValues.find(b => b === 'adidas'):
-        return <FontAwesome5 name="stripe-s" size={16} color={COLORS.primary} />;
-      case brandValues.find(b => b === 'jordan'):
-        return <MaterialCommunityIcons name="basketball" size={16} color={COLORS.primary} />;
-      default:
-        return <FontAwesome5 name="tag" size={16} color={COLORS.primary} />;
-    }
-  };
-
-  const getGenderIcon = (gender) => {
-    switch (gender) {
-      case GENDER_OPTIONS.find(g => g === 'men'):
-        return <FontAwesome5 name="male" size={16} color={COLORS.primary} />;
-      case GENDER_OPTIONS.find(g => g === 'women'):
-        return <FontAwesome5 name="female" size={16} color={COLORS.primary} />;
-      case GENDER_OPTIONS.find(g => g === 'kids'):
-        return <FontAwesome5 name="child" size={16} color={COLORS.primary} />;
-      default:
-        return <MaterialCommunityIcons name="gender-male-female" size={16} color={COLORS.primary} />;
-    }
-  };
-
   // Show loading state while fetching enum values
   if (enumsLoading) {
     return (
@@ -737,7 +689,7 @@ const ProductScreen = () => {
                       <Text style={styles.requiredMark}>*</Text>
                     </View>
                     <View style={styles.inputContainer}>
-                      <MaterialIcons name="attach-money" size={20} color={COLORS.primary} style={styles.inputIcon} />
+                    <MaterialCommunityIcons name="currency-php" size={20} color={COLORS.primary} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
                         placeholder="0.00"
