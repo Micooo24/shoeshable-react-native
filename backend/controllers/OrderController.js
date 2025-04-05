@@ -120,16 +120,26 @@ exports.getAllOrders = async (req, res) => {
 // Admin: Update order status
 exports.updateOrder = async (req, res) => {
     try {
+        console.log('----------- UPDATE ORDER DEBUG -----------');
+        console.log('Request Body:', req.body);
+        console.log('Order ID:', req.params.id);
+        console.log('Expected status field name: "status"');
+        console.log('Available status values:', ['Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled']);
+        
         const order = await Order.findById(req.params.id);
 
         if (!order) {
+            console.log('Order not found with ID:', req.params.id);
             return res.status(404).json({
                 success: false,
                 message: 'Order not found'
             });
         }
 
+        console.log('Current order status:', order.orderStatus);
+
         if (order.orderStatus === 'Delivered') {
+            console.log('Cannot update: Order already delivered');
             return res.status(400).json({
                 success: false,
                 message: 'You have already delivered this order'
@@ -137,24 +147,51 @@ exports.updateOrder = async (req, res) => {
         }
 
         if (order.orderStatus === 'Cancelled') {
+            console.log('Cannot update: Order already cancelled');
             return res.status(400).json({
                 success: false,
                 message: 'This order has already been cancelled'
             });
         }
 
-        order.orderStatus = req.body.status;
+        // Check if status is sent with the correct field name
+        const newStatus = req.body.status || req.body.orderStatus;
+        console.log('New status to be applied:', newStatus);
         
-        if (req.body.status === 'Delivered') {
+        if (!newStatus) {
+            console.log('ERROR: No status provided in request body');
+            return res.status(400).json({
+                success: false,
+                message: 'No status provided'
+            });
+        }
+        
+        // Validate if the status is valid
+        const validStatuses = ['Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
+        if (!validStatuses.includes(newStatus)) {
+            console.log('ERROR: Invalid status value provided:', newStatus);
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status value'
+            });
+        }
+
+        // Apply the new status
+        order.orderStatus = newStatus;
+        
+        if (newStatus === 'Delivered') {
+            console.log('Marking order as delivered, setting deliveredAt timestamp');
             order.deliveredAt = Date.now();
 
             // If it was COD, mark as paid when delivered
             if (!order.paidAt && order.paymentInfo.method === 'Cash on Delivery') {
+                console.log('COD order being delivered - marking as paid');
                 order.paidAt = Date.now();
             }
         }
 
         await order.save();
+        console.log('Order successfully updated to status:', newStatus);
 
         res.status(200).json({
             success: true,
@@ -162,6 +199,7 @@ exports.updateOrder = async (req, res) => {
             order
         });
     } catch (error) {
+        console.error('Error updating order:', error);
         res.status(500).json({
             success: false,
             message: error.message

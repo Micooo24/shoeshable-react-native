@@ -18,6 +18,7 @@ import { getToken } from '../../../sqlite_db/Auth';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../../../Theme/color';
+import { styles } from '../../../Styles/order';
 
 const Order = () => {
   const [orders, setOrders] = useState([]);
@@ -90,39 +91,54 @@ const Order = () => {
   };
   
   // Update order status
-  const updateOrderStatus = async (orderId, newStatus) => {
-    try {
-      setLoading(true);
-      const tokenData = await getToken();
-      
-      const response = await axios.put(`${baseURL}/api/orders/update/${orderId}`, 
-        { orderStatus: newStatus },
-        {
-          headers: {
-            Authorization: `Bearer ${tokenData.authToken}`
-          }
+const updateOrderStatus = async (orderId, newStatus) => {
+  try {
+    setLoading(true);
+    const tokenData = await getToken();
+    
+    console.log('Updating order:', orderId);
+    console.log('New status:', newStatus);
+    
+    // Send BOTH field names to ensure compatibility with backend
+    const response = await axios.put(`${baseURL}/api/orders/update/${orderId}`, 
+      { 
+        status: newStatus,     // Include this field for backend compatibility
+        orderStatus: newStatus // Keep this field as well
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${tokenData.authToken}`
         }
-      );
-      
-      if (response.data.success) {
-        // Update local state
-        const updatedOrders = orders.map(order => 
-          order._id === orderId ? { ...order, orderStatus: newStatus } : order
-        );
-        setOrders(updatedOrders);
-        Alert.alert('Success', `Order status updated to ${newStatus}`);
-        setModalVisible(false);
-      } else {
-        Alert.alert('Error', 'Failed to update order status');
       }
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      Alert.alert('Error', error.message || 'An error occurred while updating order status');
-      setLoading(false);
+    );
+    
+    console.log('Update response:', response.data);
+    
+    if (response.data.success) {
+      // Update local state
+      const updatedOrders = orders.map(order => 
+        order._id === orderId ? { ...order, orderStatus: newStatus } : order
+      );
+      setOrders(updatedOrders);
+      Alert.alert('Success', `Order status updated to ${newStatus}`);
+      setModalVisible(false);
+    } else {
+      Alert.alert('Error', response.data.message || 'Failed to update order status');
     }
-  };
+    
+    setLoading(false);
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    
+    // Better error handling to show the specific API error message
+    const errorMsg = error.response?.data?.message || 
+                    error.message || 
+                    'An error occurred while updating order status';
+    
+    Alert.alert('Error', errorMsg);
+    setLoading(false);
+  }
+};
   
   // Filter orders by status
   const getFilteredOrders = () => {
@@ -458,346 +474,3 @@ const Order = () => {
 };
 
 export default Order;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    padding: 16,
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.textLight,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  pickerContainer: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 40,
-    width: '100%',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
-    color: COLORS.textLight,
-  },
-  listContent: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-  orderCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    marginBottom: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  orderIdContainer: {
-    flex: 1,
-  },
-  orderId: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  orderDate: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  orderBody: {
-    marginBottom: 12,
-  },
-  customerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  customerName: {
-    fontSize: 14,
-    marginLeft: 6,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  infoIcon: {
-    marginLeft: 16,
-  },
-  customerPhone: {
-    fontSize: 14,
-    marginLeft: 6,
-    color: COLORS.text,
-  },
-  orderSummary: {
-    backgroundColor: '#f9f9f9',
-    padding: 12,
-    borderRadius: 8,
-  },
-  summaryItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: COLORS.textLight,
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-  },
-  orderFooter: {
-    alignItems: 'flex-end',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.textLight,
-    marginVertical: 12,
-    textAlign: 'center',
-  },
-  refreshButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  refreshButtonText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 20,
-    paddingBottom: 32,
-    height: '90%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  modalBody: {
-    padding: 20,
-  },
-  detailsCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  detailsCardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 12,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  detailsLabel: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    flex: 1,
-  },
-  detailsValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-    flex: 2,
-    textAlign: 'right',
-  },
-  detailsStatusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-  },
-  detailsStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  orderItemCard: {
-    flexDirection: 'row',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-  },
-  productDetails: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  productVariants: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    marginBottom: 4,
-  },
-  productPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  productPrice: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.primary,
-  },
-  productQuantity: {
-    fontSize: 14,
-    color: COLORS.textLight,
-  },
-  discountValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#f5222d',
-    flex: 2,
-    textAlign: 'right',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  statusPickerContainer: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    marginVertical: 12,
-  },
-  statusPicker: {
-    height: 50,
-  },
-  updateButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  updateButtonText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: 'bold',
-  }
-});

@@ -31,7 +31,6 @@ const Dashboard = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('week');
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Enhanced animations with staggered effect
   useEffect(() => {
     Animated.sequence([
       Animated.timing(fadeAnim, {
@@ -59,7 +58,6 @@ const Dashboard = ({ navigation }) => {
     ]).start();
   }, []);
 
-  // Header shadow animation based on scroll position
   const headerShadow = scrollY.interpolate({
     inputRange: [0, 20],
     outputRange: [0, 10],

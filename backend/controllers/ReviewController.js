@@ -1,12 +1,6 @@
-// Import the Review model
-const Review = require('../models/Reviews');
+const Review = require('../models/Review');
 
-/**
- * Fetch all reviews from the database
- * @param {Object} req - The request object
- * @param {Object} res - The response object
- */
-const getAllReviews = async (req, res) => {
+exports.getAllReviews = async (req, res) => {
     try {
         // Fetch all reviews
         const reviews = await Review.find();
@@ -25,12 +19,7 @@ const getAllReviews = async (req, res) => {
     }
 };
 
-/**
- * Delete a review from the database
- * @param {Object} req - The request object
- * @param {Object} res - The response object
- */
-const deleteReview = async (req, res) => {
+exports.deleteReview = async (req, res) => {
     try {
         // Get the review ID from the request parameters
         const { id } = req.params;
@@ -62,12 +51,7 @@ const deleteReview = async (req, res) => {
     }
 };
 
-/**
- * Update a review in the database
- * @param {Object} req - The request object
- * @param {Object} res - The response object
- */
-const updateReview = async (req, res) => {
+exports.updateReview = async (req, res) => {
     try {
         const { productId, orderId } = req.params; // Get productId and orderId from URL params
         const { reviewText, rating } = req.body; // Get reviewText and rating from request body
@@ -108,7 +92,118 @@ const updateReview = async (req, res) => {
     }
 };
 
-
-
-// Export all functions
-module.exports = { getAllReviews, deleteReview, updateReview };
+exports.createReview = async (req, res) => {
+    try {
+        // Get data from request
+        const { productId, orderId, reviewText, rating } = req.body;
+        const userId = req.user._id; // Assuming user is attached to req by authentication middleware
+        
+        // Check if all required fields are provided
+        if (!productId || !orderId || !reviewText || !rating) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide productId, orderId, reviewText, and rating',
+            });
+        }
+        
+        // Validate rating
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Rating must be between 1 and 5',
+            });
+        }
+        
+        // Find the order and check if it belongs to the user
+        const Order = require('../models/Order'); // Import Order model
+        const order = await Order.findOne({ 
+            _id: orderId,
+            user: userId
+        });
+        
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found or does not belong to you',
+            });
+        }
+        
+        // Check if the order status is delivered
+        if (order.status !== 'delivered') {
+            return res.status(400).json({
+                success: false,
+                message: 'You can only review products from delivered orders',
+            });
+        }
+        
+        // Check if the product exists in the order
+        // This implementation adapts to different possible Order model structures
+        let productInOrder = false;
+        
+        // If order.products is an array of product IDs
+        if (Array.isArray(order.products) && order.products.length > 0) {
+            if (typeof order.products[0] === 'string' || order.products[0] instanceof mongoose.Types.ObjectId) {
+                productInOrder = order.products.some(product => 
+                    product.toString() === productId.toString()
+                );
+            } 
+            // If order.products is an array of objects with a product field
+            else if (typeof order.products[0] === 'object' && order.products[0].product) {
+                productInOrder = order.products.some(item => 
+                    item.product.toString() === productId.toString()
+                );
+            }
+            // If order has a different structure with product IDs
+            else if (order.items && Array.isArray(order.items)) {
+                productInOrder = order.items.some(item => 
+                    (item.product || item.productId).toString() === productId.toString()
+                );
+            }
+        }
+        
+        if (!productInOrder) {
+            return res.status(400).json({
+                success: false,
+                message: 'You can only review products that you ordered',
+            });
+        }
+        
+        // Check if the user has already reviewed this product from this order
+        const existingReview = await Review.findOne({
+            productId,
+            orderId,
+            user: userId
+        });
+        
+        if (existingReview) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already reviewed this product from this order',
+            });
+        }
+        
+        // Create the review
+        const review = await Review.create({
+            productId,
+            orderId,
+            reviewText,
+            rating,
+            user: userId
+        });
+        
+        // Return the created review
+        res.status(201).json({
+            success: true,
+            message: 'Review created successfully',
+            data: review
+        });
+        
+    } catch (error) {
+        console.error('Error creating review:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create review',
+            error: error.message,
+        });
+    }
+};

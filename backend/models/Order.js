@@ -97,7 +97,7 @@ const orderSchema = mongoose.Schema({
         type: String,
         required: true,
         default: 'Processing',
-        enum: ['Processing', 'Shipped', 'Delivered', 'Cancelled']
+        enum: ['Processing', 'Confirmed','Shipped', 'Delivered', 'Cancelled']
     },
     paidAt: {
         type: Date,

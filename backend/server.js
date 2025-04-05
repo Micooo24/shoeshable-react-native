@@ -14,6 +14,7 @@ const authRoutes = require("./routes/auth");
 const cartRoutes = require('./routes/carts');  
 const orderRoutes = require('./routes/orders'); 
 const featuredRoutes = require('./routes/features'); // Import the featured routes
+const reviewRoutes = require('./routes/reviews'); // Import the review route
 // Mongoose
 mongoose
     .connect(process.env.DATABASE, {
@@ -47,6 +48,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/cart", cartRoutes); // Use the cart routes
 app.use("/api/orders", orderRoutes); // Use the order routes
 app.use("/api/features", featuredRoutes); // Use the featured routes
+app.use("/api/reviews", reviewRoutes); // Use the review route
 
 app.use((req, res, next) => {
     res.status(404).json({ message: 'Route not found' });
