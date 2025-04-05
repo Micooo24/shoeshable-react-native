@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Alert, 
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+  StatusBar
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import { saveToken } from '../../sqlite_db/Auth';
 import baseURL from '../../assets/common/baseurl';
 import axios from 'axios';
+import { COLORS } from '../../Theme/color';
 
 const Login = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -13,6 +27,7 @@ const Login = ({ navigation }) => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
+  const [secureTextEntry, setSecureTextEntry] = useState(true);
 
   useEffect(() => {
     // Configure Google Sign-In
@@ -149,158 +164,283 @@ const Login = ({ navigation }) => {
     }
   };
 
+  const toggleSecureEntry = () => {
+    setSecureTextEntry(!secureTextEntry);
+  };
+
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Icon name="arrow-left" size={24} color="#001F3F" />
-      </TouchableOpacity>
-
-      <View style={styles.headerContainer}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Login to your account</Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            keyboardType="email-address"
-            onChangeText={(text) => setFormData({ ...formData, email: text })}
-            value={formData.email}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            secureTextEntry
-            onChangeText={(text) => setFormData({ ...formData, password: text })}
-            value={formData.password}
-          />
-        </View>
-
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.light} />
+      
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>LOGIN</Text>
-          )}
+          <Icon name="arrow-left" size={22} color={COLORS.primary} />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.googleButton}
-          onPress={handleGoogleLogin}
-          disabled={loading}
-        >
-          <Icon name="google" size={24} color="#FFFFFF" />
-          <Text style={styles.googleButtonText}>Sign in with Google</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to continue</Text>
+        </View>
+
+        <View style={styles.formContainer}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="email-outline" size={20} color={COLORS.darkGrey} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor={COLORS.textLight}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                onChangeText={(text) => setFormData({ ...formData, email: text })}
+                value={formData.email}
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="lock-outline" size={20} color={COLORS.darkGrey} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your password"
+                placeholderTextColor={COLORS.textLight}
+                secureTextEntry={secureTextEntry}
+                onChangeText={(text) => setFormData({ ...formData, password: text })}
+                value={formData.password}
+              />
+              <TouchableOpacity onPress={toggleSecureEntry} style={styles.eyeIcon}>
+                <Icon 
+                  name={secureTextEntry ? "eye-outline" : "eye-off-outline"} 
+                  size={20} 
+                  color={COLORS.darkGrey} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <TouchableOpacity style={styles.forgotPassword}>
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Text style={styles.buttonText}>SIGN IN</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Icon name="google" size={20} color={COLORS.white} />
+            <Text style={styles.googleButtonText}>Sign in with Google</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.signupContainer}>
+            <Text style={styles.signupText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.signupLink}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
-// Your existing styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
-    padding: 20,
+    backgroundColor: COLORS.light,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    padding: 24,
   },
   backButton: {
-    marginTop: 40,
-    marginBottom: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Platform.OS === 'ios' ? 20 : 10,
+    marginBottom: 10,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    shadowColor: COLORS.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   headerContainer: {
+    marginTop: 20,
     marginBottom: 40,
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#001F3F',
+    color: COLORS.primary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666666',
+    color: COLORS.textLight,
     letterSpacing: 0.5,
   },
   formContainer: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
+    backgroundColor: COLORS.white,
+    padding: 24,
+    borderRadius: 16,
+    shadowColor: COLORS.shadow,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 10,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 15,
+    elevation: 6,
   },
   inputContainer: {
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    color: '#001F3F',
+    color: COLORS.text,
     marginBottom: 8,
     fontWeight: '600',
   },
-  input: {
-    backgroundColor: '#F8F8F8',
-    padding: 15,
-    borderRadius: 8,
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.light,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.grey,
+  },
+  inputIcon: {
+    paddingLeft: 15,
+  },
+  input: {
+    flex: 1,
+    padding: 15,
     fontSize: 16,
+    color: COLORS.text,
+  },
+  eyeIcon: {
+    paddingRight: 15,
   },
   forgotPassword: {
     alignItems: 'flex-end',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#001F3F',
+    color: COLORS.accent,
     fontSize: 14,
     fontWeight: '600',
   },
   button: {
-    backgroundColor: '#001F3F',
-    padding: 18,
-    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    padding: 16,
+    borderRadius: 10,
     alignItems: 'center',
     marginBottom: 20,
+    shadowColor: COLORS.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonDisabled: {
+    backgroundColor: COLORS.primaryLight,
+    opacity: 0.7,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 1,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.grey,
+  },
+  dividerText: {
+    color: COLORS.textLight,
+    paddingHorizontal: 10,
+    fontSize: 14,
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#DB4437',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: COLORS.danger,
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 24,
+    shadowColor: COLORS.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   googleButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 10,
+  },
+  signupContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  signupText: {
+    color: COLORS.textLight,
+    fontSize: 14,
+  },
+  signupLink: {
+    color: COLORS.accent,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
