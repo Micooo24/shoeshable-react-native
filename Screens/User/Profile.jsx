@@ -19,6 +19,9 @@ import axios from "axios";
 import baseURL from "../../assets/common/baseurl";
 import { styles, COLORS } from "../../Styles/profile";
 
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+
 const Profile = ({ navigation }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState({ username: '', avatar: 'https://via.placeholder.com/150' });
@@ -32,6 +35,10 @@ const Profile = ({ navigation }) => {
     zipCode: ''
   });
 
+ 
+
+  const [newProfileImage, setNewProfileImage] = useState(null); // Will store base64 string
+
   const purchaseStatuses = [
     { title: "To Pay", icon: "credit-card-outline" },
     { title: "To Ship", icon: "package-variant-closed" },
@@ -39,94 +46,139 @@ const Profile = ({ navigation }) => {
     { title: "To Rate", icon: "star-outline" },
   ];
 
-  // Function to fetch user profile data
-  const fetchUserProfile = async (token) => {
+   // Function to convert image URI to base64
+   const uriToBase64 = async (uri) => {
     try {
-      setIsLoading(true);
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return `data:image/jpeg;base64,${base64}`;
+    } catch (error) {
+      console.error('Error converting image to base64:', error);
+      return null;
+    }
+  };
+
+
+// Inside fetchUserProfile function, make sure to log the image URL for debugging
+const fetchUserProfile = async (token) => {
+  try {
+    setIsLoading(true);
+    
+    const response = await axios.get(`${baseURL}/api/auth/profile`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    if (response.data && response.data.success) {
+      const user = response.data.user;
       
-      const response = await axios.get(`${baseURL}/api/auth/profile`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      // Log the profile image URL for debugging
+      console.log('Profile Image URL:', user.profileImage?.url);
+      
+      // Update user data state with response
+      setUserData({
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phoneNumber: user.phoneNumber,
+        address: user.address,
+        zipCode: user.zipCode,
+        avatar: user.profileImage?.url || 'https://via.placeholder.com/150'
       });
       
-      if (response.data && response.data.success) {
-        const user = response.data.user;
-        
-        // Update user data state with response
-        setUserData({
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phoneNumber: user.phoneNumber,
-          address: user.address,
-          zipCode: user.zipCode,
-          avatar: user.profileImage?.url || 'https://via.placeholder.com/150'
-        });
-        
-        // Also initialize the form data for editing
-        setProfileForm({
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          phoneNumber: user.phoneNumber?.toString() || '',
-          address: user.address || '',
-          zipCode: user.zipCode?.toString() || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      Alert.alert('Error', 'Failed to load profile data');
-    } finally {
-      setIsLoading(false);
+      // Also initialize the form data for editing
+      setProfileForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phoneNumber: user.phoneNumber?.toString() || '',
+        address: user.address || '',
+        zipCode: user.zipCode?.toString() || ''
+      });
+      
+      // Reset new profile image when fetching fresh data
+      setNewProfileImage(null);
     }
-  };
-  
-  // Function to update user profile
-  const updateProfile = async () => {
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    Alert.alert('Error', 'Failed to load profile data');
+  } finally {
+    setIsLoading(false);
+  }
+};
+  // Pick an image from gallery
+  const pickImage = async () => {
     try {
-      setIsLoading(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
       
-      const tokenData = await getToken();
-      if (!tokenData || !tokenData.authToken) {
-        Alert.alert('Error', 'You need to be logged in to update your profile');
-        return;
-      }
-      
-      // Convert phone number and zip code to numbers if they're numeric strings
-      const formattedData = {
-        ...profileForm,
-        phoneNumber: parseInt(profileForm.phoneNumber, 10),
-        zipCode: parseInt(profileForm.zipCode, 10)
-      };
-      
-      const response = await axios.put(
-        `${baseURL}/api/auth/profile/update`,
-        formattedData,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenData.authToken}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      if (response.data && response.data.success) {
-        Alert.alert('Success', 'Profile updated successfully');
-        // Refresh profile data
-        fetchUserProfile(tokenData.authToken);
-        setIsModalVisible(false);
-      } else {
-        Alert.alert('Error', response.data?.message || 'Failed to update profile');
+      if (!result.canceled) {
+        const base64Image = await uriToBase64(result.assets[0].uri);
+        setNewProfileImage(base64Image);
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
-    } finally {
-      setIsLoading(false);
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image from gallery');
     }
   };
+
+  
+// Function to update user profile with new image
+const updateProfile = async () => {
+  try {
+    setIsLoading(true);
+    
+    const tokenData = await getToken();
+    if (!tokenData || !tokenData.authToken) {
+      Alert.alert('Error', 'You need to be logged in to update your profile');
+      return;
+    }
+    
+    // Convert phone number and zip code to numbers if they're numeric strings
+    const formattedData = {
+      ...profileForm,
+      phoneNumber: parseInt(profileForm.phoneNumber, 10),
+      zipCode: parseInt(profileForm.zipCode, 10)
+    };
+    
+    // If there's a new profile image, add it to the request body
+    if (newProfileImage) {
+      formattedData.profileImage = newProfileImage;
+    }
+    
+    const response = await axios.put(
+      `${baseURL}/api/auth/profile/update`,
+      formattedData,
+      {
+        headers: {
+          Authorization: `Bearer ${tokenData.authToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (response.data && response.data.success) {
+      Alert.alert('Success', 'Profile updated successfully');
+      // Refresh profile data
+      fetchUserProfile(tokenData.authToken);
+      setIsModalVisible(false);
+    } else {
+      Alert.alert('Error', response.data?.message || 'Failed to update profile');
+    }
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Check login status and fetch profile when component mounts
   useEffect(() => {
@@ -170,6 +222,7 @@ const Profile = ({ navigation }) => {
   
   // Handle opening the profile edit modal
   const handleEditProfile = () => {
+    setNewProfileImage(null);
     setIsModalVisible(true);
   };
 
@@ -185,9 +238,14 @@ const Profile = ({ navigation }) => {
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
               <Image
-                source={{ uri: userData.avatar }}
-                style={styles.avatar}
-              />
+              source={{ uri: userData.avatar }}
+              style={styles.avatar}
+              onError={(e) => {
+                console.log('Error loading avatar:', e.nativeEvent.error);
+                // If image fails to load, set to default
+                setUserData(prev => ({...prev, avatar: 'https://via.placeholder.com/150'}));
+              }}
+            />
             )}
             <View style={styles.userTextContainer}>
               <Text style={styles.welcomeText}>Welcome back</Text>
@@ -381,8 +439,8 @@ const Profile = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Profile Edit Modal */}
-      <Modal
+       {/* Profile Edit Modal - Modified to remove camera option */}
+       <Modal
         visible={isModalVisible}
         transparent={true}
         animationType="slide"
@@ -396,6 +454,26 @@ const Profile = ({ navigation }) => {
               <ActivityIndicator size="large" color={COLORS.primary} style={{marginVertical: 20}} />
             ) : (
               <>
+                {/* Profile Image Section - Modified */}
+                <View style={styles.profileImageContainer}>
+                <Image
+                      source={{ 
+                        uri: newProfileImage || userData.avatar 
+                      }}
+                      style={styles.profileImagePreview}
+                      onError={(e) => {
+                        console.log('Error loading profile image preview:', e.nativeEvent.error);
+                      }}
+                    />
+                  <TouchableOpacity
+                    style={[styles.imageButton, {width: '80%', marginTop: 10}]}
+                    onPress={pickImage}
+                  >
+                    <Icon name="image" size={16} color={COLORS.white} />
+                    <Text style={styles.imageButtonText}>Choose from Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+                
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>First Name</Text>
                   <TextInput
@@ -435,7 +513,7 @@ const Profile = ({ navigation }) => {
                     onChangeText={(text) => setProfileForm({...profileForm, address: text})}
                     placeholder="Address"
                   />
-                </View>
+                  </View>
                 
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>Zip Code</Text>

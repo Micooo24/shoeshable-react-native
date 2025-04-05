@@ -30,8 +30,10 @@
       "expo-secure-store",
       "@react-native-google-signin/google-signin",
       "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       "@react-native-firebase/auth",
       "expo-sqlite"
+      
     ]
   }
 }
