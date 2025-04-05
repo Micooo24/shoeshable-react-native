@@ -14,11 +14,11 @@ const { isAuthenticatedUser } = require("../middlewares/Auth");
 // User routes
 router.post('/create', isAuthenticatedUser, createOrder);
 router.get('/myorders', isAuthenticatedUser, myOrders);
-router.get('/:id', isAuthenticatedUser, getSingleOrder);
+router.get('/myorder/:id', isAuthenticatedUser, getSingleOrder);
 
 // Admin routes
-router.get('/', isAuthenticatedUser,  getAllOrders);
-router.put('/:id', isAuthenticatedUser, updateOrder);
-router.delete('/:id', isAuthenticatedUser,  deleteOrder);
+router.get('/all', isAuthenticatedUser,  getAllOrders);
+router.put('/update/:id', isAuthenticatedUser, updateOrder);
+router.delete('/delete/:id', isAuthenticatedUser,  deleteOrder);
 
 module.exports = router;

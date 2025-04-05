@@ -4,50 +4,77 @@ import {
   Text,
   View,
   StatusBar,
-  ScrollView,
   FlatList,
-  Image,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  Alert
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import BottomNavigator from "../../Navigators/BottomNavigator";
 import { COLORS } from '../../Theme/color';
 import baseURL from "../../assets/common/baseurl";
+import axios from "axios";
+import { ProductCard } from "../../Components/ProductCard";
 
 const { width } = Dimensions.get("window");
-const cardWidth = width / 2 - 25;
 
 const TrendsScreen = ({ navigation }) => {
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [timeFilter, setTimeFilter] = useState("all");
+  const [timeFilter, setTimeFilter] = useState("all"); // all, week, month, year
   const [error, setError] = useState(null);
 
   const fetchTrendingProducts = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(
-        `${baseURL}/trending?period=${timeFilter}&limit=10`
+      console.log(`Making request to: ${baseURL}/api/features/trending?period=${timeFilter}&limit=10`);
+      
+      // Using axios instead of fetch for better error handling
+      const response = await axios.get(
+        `${baseURL}/api/features/trending?period=${timeFilter}&limit=10`
       );
       
-      if (!response.ok) {
-        throw new Error("Failed to fetch trending products");
-      }
+      console.log("Response received:", response.status);
       
-      const data = await response.json();
-      
-      if (data.success) {
-        setTrendingProducts(data.trendingProducts);
+      if (response.data && response.data.success) {
+        // Transform trending products to match ProductCard expectations
+        const formattedProducts = response.data.trendingProducts.map(item => ({
+          _id: item._id,
+          name: item.productName,
+          price: item.productPrice || item.averagePrice,
+          image: [item.productImage], // ProductCard expects an array
+          brand: item.brand || "Unknown",
+          category: item.category || "Trending", 
+          // Add any other required properties
+          totalSold: item.totalSold,
+          colors: item.colors,
+          sizes: item.sizes
+        }));
+        
+        setTrendingProducts(formattedProducts);
       } else {
-        setError(data.message || "Failed to load trending products");
+        setError(response.data?.message || "Failed to load trending products");
       }
     } catch (err) {
-      setError(err.message);
-      console.error(err);
+      console.error("Trending products fetch error:", err);
+      // More detailed error info
+      const errorMessage = err.response 
+        ? `Error ${err.response.status}: ${err.response.data?.message || err.message}`
+        : err.message || "Network error";
+      
+      setError(errorMessage);
+      
+      // Alert for debugging in development
+      if (__DEV__) {
+        Alert.alert(
+          "API Error",
+          `Error fetching trending products: ${errorMessage}\n\nURL: ${baseURL}/api/features/trending`,
+          [{ text: "OK" }]
+        );
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -82,83 +109,47 @@ const TrendsScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const renderProductCard = ({ item, index }) => {
-    // Calculate badge text based on index
-    let badgeText = "";
-    let badgeStyle = {};
-    
-    if (index === 0) {
-      badgeText = "Best Seller";
-      badgeStyle = { backgroundColor: "#FFD700" };
-    } else if (index === 1) {
-      badgeText = "Popular";
-      badgeStyle = { backgroundColor: "#C0C0C0" };
-    } else if (index === 2) {
-      badgeText = "Hot Item";
-      badgeStyle = { backgroundColor: "#CD7F32" };
-    }
-
-    return (
-      <TouchableOpacity
-        style={styles.productCard}
-        onPress={() => navigation.navigate("ProductDetail", { id: item._id })}
-      >
-        {badgeText && (
-          <View style={[styles.badge, badgeStyle]}>
-            <Text style={styles.badgeText}>{badgeText}</Text>
-          </View>
-        )}
-        <Image
-          source={{ uri: item.productImage }}
-          style={styles.productImage}
-          resizeMode="cover"
-        />
-        <View style={styles.productInfo}>
-          <Text style={styles.productName} numberOfLines={2}>
-            {item.productName}
-          </Text>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{item.totalSold}</Text>
-              <Text style={styles.statLabel}>Sold</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                ₱{item.averagePrice?.toFixed(0) || item.productPrice}
-              </Text>
-              <Text style={styles.statLabel}>Price</Text>
-            </View>
-          </View>
-          
-          <View style={styles.colorsContainer}>
-            {item.colors?.slice(0, 3).map((color, idx) => (
-              <View
-                key={`${color}-${idx}`}
-                style={[
-                  styles.colorDot,
-                  { backgroundColor: color.toLowerCase() === "white" ? "#F8F8F8" : color.toLowerCase() }
-                ]}
-              />
-            ))}
-            {(item.colors?.length > 3) && (
-              <Text style={styles.moreColorsText}>+{item.colors.length - 3}</Text>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <MaterialIcons name="trending-up" size={64} color={COLORS.lightGray} />
+      <MaterialIcons name="trending-up" size={64} color={COLORS.lightGray || "#D1D5DB"} />
       <Text style={styles.emptyText}>No trending products found</Text>
       <Text style={styles.emptySubtext}>
         Products will appear here once they start selling
       </Text>
     </View>
+  );
+
+  // Use FlatList with ProductCard component
+  const renderProductList = () => (
+    <FlatList
+      data={trendingProducts}
+      keyExtractor={(item) => item._id.toString()}
+      renderItem={({ item }) => (
+        <ProductCard item={item} navigation={navigation} />
+      )}
+      numColumns={2}
+      columnWrapperStyle={styles.productRow}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.listContainer}
+      ListEmptyComponent={renderEmptyList}
+      refreshControl={
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh} 
+          colors={[COLORS.primary]} 
+        />
+      }
+      ListHeaderComponent={
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Top Products
+          </Text>
+          <Text style={styles.sectionSubtitle}>
+            Based on {timeFilter === "all" ? "all time" : timeFilter} sales
+          </Text>
+        </View>
+      }
+    />
   );
 
   return (
@@ -182,7 +173,7 @@ const TrendsScreen = ({ navigation }) => {
 
       {error ? (
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={COLORS.danger} />
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.danger || "#EF4444"} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchTrendingProducts}>
             <Text style={styles.retryButtonText}>Retry</Text>
@@ -194,29 +185,7 @@ const TrendsScreen = ({ navigation }) => {
           <Text style={styles.loadingText}>Loading trending products...</Text>
         </View>
       ) : (
-        <FlatList
-          data={trendingProducts}
-          keyExtractor={(item) => item._id.toString()}
-          renderItem={renderProductCard}
-          numColumns={2}
-          columnWrapperStyle={styles.productRow}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={renderEmptyList}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-          }
-          ListHeaderComponent={
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                Top Products
-              </Text>
-              <Text style={styles.sectionSubtitle}>
-                Based on {timeFilter === "all" ? "all time" : timeFilter} sales
-              </Text>
-            </View>
-          }
-        />
+        renderProductList()
       )}
 
       <View style={styles.bottomNavContainer}>
@@ -304,91 +273,11 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: 80,
+    paddingHorizontal: 8,
   },
   productRow: {
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  productCard: {
-    width: cardWidth,
-    backgroundColor: "white",
-    borderRadius: 12,
-    overflow: "hidden",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
-  },
-  productImage: {
-    width: "100%",
-    height: 160,
-  },
-  productInfo: {
-    padding: 12,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1F2937",
-    marginBottom: 8,
-    height: 40,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statDivider: {
-    height: 24,
-    width: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
-  },
-  colorsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 6,
-    borderWidth: 0.5,
-    borderColor: "#E5E7EB",
-  },
-  moreColorsText: {
-    fontSize: 11,
-    color: "#6B7280",
-  },
-  badge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    zIndex: 1,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#1F2937",
   },
   loadingContainer: {
     flex: 1,

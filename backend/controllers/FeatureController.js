@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
-const Product = require('../models/Product');
+// No need to import Product model since we're only using Order data
 
+// Get trending products across all categories using only Order data
 exports.getTrendingProducts = async (req, res) => {
     try {
         // Get parameters from query
@@ -8,6 +9,7 @@ exports.getTrendingProducts = async (req, res) => {
         const period = req.query.period || 'all'; // all, week, month, year
         const sortBy = req.query.sortBy || 'quantity'; // quantity, revenue
         
+        // Build match conditions
         let match = {};
         
         // Add time period filter
@@ -23,7 +25,9 @@ exports.getTrendingProducts = async (req, res) => {
             match.createdAt = { $gte: lastYear };
         }
         
+        // Build aggregation pipeline
         const pipeline = [
+            // Filter orders by time period
             { $match: match },
             
             // Deconstruct orderItems array
@@ -37,6 +41,7 @@ exports.getTrendingProducts = async (req, res) => {
                     revenue: { $sum: { $multiply: ['$orderItems.quantity', '$orderItems.productPrice'] } },
                     productName: { $first: '$orderItems.productName' },
                     productImage: { $first: '$orderItems.productImage' },
+                    productPrice: { $first: '$orderItems.productPrice' },
                     sizes: { $addToSet: '$orderItems.size' },
                     colors: { $addToSet: '$orderItems.color' },
                     averagePrice: { $avg: '$orderItems.productPrice' }
@@ -53,31 +58,6 @@ exports.getTrendingProducts = async (req, res) => {
         // Execute the aggregation
         const trendingProducts = await Order.aggregate(pipeline);
         
-        // If you want to include any additional product information, fetch it
-        if (trendingProducts.length > 0) {
-            const productIds = trendingProducts.map(item => item._id);
-            const productDetails = await Product.find({ _id: { $in: productIds } })
-                .select('name description category brand inStock ratings'); // Select needed fields
-            
-            // Create a map for quick lookups
-            const productMap = {};
-            productDetails.forEach(product => {
-                productMap[product._id] = product;
-            });
-            
-            // Add additional product details to each trending product
-            trendingProducts.forEach(item => {
-                if (productMap[item._id]) {
-                    // Include any additional product details you want to show
-                    item.category = productMap[item._id].category;
-                    item.brand = productMap[item._id].brand;
-                    item.inStock = productMap[item._id].inStock;
-                    item.ratings = productMap[item._id].ratings;
-                    item.description = productMap[item._id].description;
-                }
-            });
-        }
-        
         res.status(200).json({
             success: true,
             period,
@@ -87,6 +67,28 @@ exports.getTrendingProducts = async (req, res) => {
         });
     } catch (error) {
         console.error('Error getting trending products:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+exports.getRecentOrders = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 5;
+        
+        const recentOrders = await Order.find()
+            .sort({ createdAt: -1 })
+            .limit(limit);
+            
+        res.status(200).json({
+            success: true,
+            count: recentOrders.length,
+            orders: recentOrders
+        });
+    } catch (error) {
+        console.error('Error getting recent orders:', error);
         res.status(500).json({
             success: false,
             message: error.message

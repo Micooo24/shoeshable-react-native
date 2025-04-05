@@ -430,3 +430,126 @@ exports.updateProductStock = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
+exports.searchProducts = async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    // Initialize empty search criteria
+    const searchCriteria = {};
+    
+    // Text search for name, brand, and category only
+    if (query) {
+      searchCriteria.$or = [
+        { name: { $regex: query, $options: 'i' } },
+        { brand: { $regex: query, $options: 'i' } },
+        { category: { $regex: query, $options: 'i' } }
+      ];
+    }
+    
+    // Find products matching the criteria
+    const products = await Product.find(searchCriteria);
+    
+    res.status(200).json({
+      message: "Products fetched successfully",
+      count: products.length,
+      products,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+exports.filterProducts = async (req, res) => {
+  try {
+    const { 
+      category, 
+      gender, 
+      minPrice, 
+      maxPrice, 
+      color,
+      sort
+    } = req.query;
+
+    // Initialize empty filter criteria
+    const filterCriteria = {};
+    
+    // Apply category filter
+    if (category) {
+      if (!Object.values(SHOE_CATEGORIES).includes(category)) {
+        return res.status(400).json({ error: "Invalid category" });
+      }
+      filterCriteria.category = category;
+    }
+    
+    // Apply gender filter
+    if (gender) {
+      if (!GENDER_OPTIONS.includes(gender)) {
+        return res.status(400).json({ error: "Invalid gender" });
+      }
+      filterCriteria.gender = gender;
+    }
+    
+    // Apply color filter
+    if (color) {
+      if (!COMMON_COLORS.map(c => c.toLowerCase()).includes(color.toLowerCase())) {
+        return res.status(400).json({ error: "Invalid color" });
+      }
+      filterCriteria.color = { $regex: new RegExp(color, 'i') };
+    }
+    
+    // Apply price range filter
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      filterCriteria.price = {};
+      if (minPrice !== undefined) {
+        const min = Number(minPrice);
+        if (isNaN(min)) {
+          return res.status(400).json({ error: "Invalid minimum price" });
+        }
+        filterCriteria.price.$gte = min;
+      }
+      if (maxPrice !== undefined) {
+        const max = Number(maxPrice);
+        if (isNaN(max)) {
+          return res.status(400).json({ error: "Invalid maximum price" });
+        }
+        filterCriteria.price.$lte = max;
+      }
+    }
+    let query = Product.find(filterCriteria);
+  
+    if (sort) {
+      switch (sort) {
+        case 'price_asc':
+          query = query.sort({ price: 1 });
+          break;
+        case 'price_desc':
+          query = query.sort({ price: -1 });
+          break;
+        case 'newest':
+          query = query.sort({ createdAt: -1 });
+          break;
+        case 'name_asc':
+          query = query.sort({ name: 1 });
+          break;
+        default:
+          query = query.sort({ createdAt: -1 });
+      }
+    } else {
+      query = query.sort({ createdAt: -1 });
+    }
+    
+    const products = await query.exec();
+    
+    res.status(200).json({
+      message: "Filtered products fetched successfully",
+      count: products.length,
+      products,
+    });
+  } catch (err) {
+    console.error('Filter error:', err);
+    res.status(500).json({ error: "Server error" });
+  }
+};

@@ -215,3 +215,36 @@ export const searchProducts = (filters) => async (dispatch) => {
     console.error('Error searching products:', error);
   }
 };
+
+export const filterProducts = (filters) => async (dispatch) => {
+  try {
+    dispatch({ type: 'FILTER_PRODUCTS_REQUEST' });
+    
+    const queryParams = new URLSearchParams();
+    
+    // Add all filter parameters to the query
+    Object.keys(filters).forEach(key => {
+      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+        queryParams.append(key, filters[key]);
+      }
+    });
+    
+    const response = await axios.get(`${baseURL}/api/products/filter?${queryParams.toString()}`);
+    
+    dispatch({ 
+      type: GET_PRODUCTS,
+      payload: response.data.products 
+    });
+    
+    return response.data;
+  } catch (error) {
+    dispatch({ 
+      type: 'FILTER_PRODUCTS_FAILURE',
+      payload: error.response && error.response.data.error 
+        ? error.response.data.error 
+        : error.message 
+    });
+    console.error('Error filtering products:', error);
+    throw error;
+  }
+};
