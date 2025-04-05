@@ -41,3 +41,9 @@ export const UPDATE_REVIEW = 'UPDATE_REVIEW';
 export const DELETE_REVIEW = 'DELETE_REVIEW';
 export const SET_CURRENT_REVIEW = 'SET_CURRENT_REVIEW';
 export const CLEAR_REVIEW = 'CLEAR_REVIEW';
+
+
+export const SET_ORDERS = 'SET_ORDERS';
+export const ORDERS_LOADING = 'ORDERS_LOADING';
+export const ORDERS_ERROR = 'ORDERS_ERROR';
+export const CLEAR_ORDERS = 'CLEAR_ORDERS';

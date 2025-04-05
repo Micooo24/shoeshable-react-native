@@ -1,5 +1,31 @@
 import { StyleSheet } from 'react-native';
-import { COLORS } from '../Theme/color';
+
+// Define colors directly in the file
+export const COLORS = {
+  primary: '#2c3e50',   
+  primaryLight: '#34495e', 
+  primaryDark: '#1a2530',  
+  white: '#ffffff',        
+  light: '#ecf0f1',        
+  grey: '#bdc3c7',         
+  darkGrey: '#7f8c8d',    
+  text: '#2c3e50',        
+  textLight: '#7f8c8d',    
+  success: '#2ecc71',     
+  warning: '#f39c12',      
+  danger: '#e74c3c',       
+  shadow: 'rgba(44, 62, 80, 0.15)', 
+  accent: '#3498db',
+  error: '#e74c3c',     
+  
+  transparent: 'transparent',
+  headerBackground: '#ffffff',
+  categoryBackground: '#f5f7fa',
+  border: '#e1e8ed',
+  selectedCategoryBackground: '#e6f2ff',
+  selectedBorder: '#3498db',
+  selectedText: '#3498db'
+};
 
 export const styles = StyleSheet.create({
   container: {
@@ -170,24 +196,42 @@ export const styles = StyleSheet.create({
     width: "23%",
   },
   statusIconContainer: {
-    backgroundColor: COLORS.light,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    elevation: 1,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    position: 'relative', // This allows absolute positioning of the badge
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${COLORS.accent}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   statusText: {
     fontSize: 12,
     color: COLORS.text,
     textAlign: "center",
     fontWeight: "500",
+  },
+
+  // Fix for count badge
+  countBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: COLORS.error,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.white,
+    zIndex: 1, // Add zIndex to make sure badge appears above other elements
+  },
+  countText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   
   // Orders list
@@ -339,9 +383,9 @@ export const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
   },
-  // Add to c:\Users\ACER\Downloads\React-Native\shoeshable-android\Styles\profile.js
-
-profileInfoRow: {
+  
+  // Profile info styles
+  profileInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
@@ -357,21 +401,6 @@ profileInfoRow: {
     fontSize: 14,
     color: COLORS.text,
     flex: 1,
-  },
-  editProfileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 6,
-    elevation: 1,
-  },
-  editProfileText: {
-    color: COLORS.white,
-    fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 4,
   },
   profileImageContainer: {
     alignItems: 'center',
@@ -453,6 +482,3 @@ profileInfoRow: {
     marginBottom: 20,
   },
 });
-
-
-export { COLORS };

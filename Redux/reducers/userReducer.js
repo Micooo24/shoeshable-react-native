@@ -1,4 +1,4 @@
-import { SET_ORDERS, ORDERS_LOADING, ORDERS_ERROR, CLEAR_ORDERS } from './constants';
+import { SET_ORDERS, ORDERS_LOADING, ORDERS_ERROR, CLEAR_ORDERS } from '../constants';
 
 const initialState = {
   orders: [],

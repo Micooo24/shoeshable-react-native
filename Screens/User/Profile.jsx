@@ -12,17 +12,33 @@ import {
   TextInput,
   ActivityIndicator
 } from "react-native";
+import { useSelector, useDispatch } from 'react-redux';
 import BottomNavigator from "../../Navigators/BottomNavigator";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { getToken, removeToken } from "../../sqlite_db/Auth";
 import axios from "axios";
 import baseURL from "../../assets/common/baseurl";
 import { styles, COLORS } from "../../Styles/profile";
-
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import { fetchUserOrders, clearOrders } from '../../Redux/actions/userActions';
 
 const Profile = ({ navigation }) => {
+  const dispatch = useDispatch();
+  
+  // Get Redux state with proper defaults to prevent errors
+  const orderData = useSelector(state => state.orderData || {});
+  const orderCounts = orderData.orderCounts || {
+    toPay: 0,
+    toShip: 0,
+    toDeliver: 0,
+    toRate: 0
+  };
+  const ordersLoading = orderData.loading || false;
+  
+  // Debug logging for order counts
+  console.log("Order counts from Redux:", orderCounts);
+  
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState({ username: '', avatar: 'https://via.placeholder.com/150' });
   const [isLoading, setIsLoading] = useState(false);
@@ -35,19 +51,18 @@ const Profile = ({ navigation }) => {
     zipCode: ''
   });
 
- 
-
   const [newProfileImage, setNewProfileImage] = useState(null); // Will store base64 string
 
+  // Updated purchase statuses with corresponding order status relationships
   const purchaseStatuses = [
-    { title: "To Pay", icon: "credit-card-outline" },
-    { title: "To Ship", icon: "package-variant-closed" },
-    { title: "To Deliver", icon: "truck-delivery-outline" },
-    { title: "To Rate", icon: "star-outline" },
+    { title: "To Pay", icon: "credit-card-outline", countKey: "toPay", status: "processing" },
+    { title: "To Ship", icon: "package-variant-closed", countKey: "toShip", status: "confirmed" },
+    { title: "To Deliver", icon: "truck-delivery-outline", countKey: "toDeliver", status: "shipped" },
+    { title: "To Rate", icon: "star-outline", countKey: "toRate", status: "delivered" },
   ];
 
-   // Function to convert image URI to base64
-   const uriToBase64 = async (uri) => {
+  // Function to convert image URI to base64
+  const uriToBase64 = async (uri) => {
     try {
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
@@ -59,56 +74,56 @@ const Profile = ({ navigation }) => {
     }
   };
 
-
-// Inside fetchUserProfile function, make sure to log the image URL for debugging
-const fetchUserProfile = async (token) => {
-  try {
-    setIsLoading(true);
-    
-    const response = await axios.get(`${baseURL}/api/auth/profile`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+  // Inside fetchUserProfile function, make sure to log the image URL for debugging
+  const fetchUserProfile = async (token) => {
+    try {
+      setIsLoading(true);
+      
+      const response = await axios.get(`${baseURL}/api/auth/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        const user = response.data.user;
+        
+        // Log the profile image URL for debugging
+        console.log('Profile Image URL:', user.profileImage?.url);
+        
+        // Update user data state with response
+        setUserData({
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          address: user.address,
+          zipCode: user.zipCode,
+          avatar: user.profileImage?.url || 'https://via.placeholder.com/150'
+        });
+        
+        // Also initialize the form data for editing
+        setProfileForm({
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          phoneNumber: user.phoneNumber?.toString() || '',
+          address: user.address || '',
+          zipCode: user.zipCode?.toString() || ''
+        });
+        
+        // Reset new profile image when fetching fresh data
+        setNewProfileImage(null);
       }
-    });
-    
-    if (response.data && response.data.success) {
-      const user = response.data.user;
-      
-      // Log the profile image URL for debugging
-      console.log('Profile Image URL:', user.profileImage?.url);
-      
-      // Update user data state with response
-      setUserData({
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phoneNumber: user.phoneNumber,
-        address: user.address,
-        zipCode: user.zipCode,
-        avatar: user.profileImage?.url || 'https://via.placeholder.com/150'
-      });
-      
-      // Also initialize the form data for editing
-      setProfileForm({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        phoneNumber: user.phoneNumber?.toString() || '',
-        address: user.address || '',
-        zipCode: user.zipCode?.toString() || ''
-      });
-      
-      // Reset new profile image when fetching fresh data
-      setNewProfileImage(null);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      Alert.alert('Error', 'Failed to load profile data');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    Alert.alert('Error', 'Failed to load profile data');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
+
   // Pick an image from gallery
   const pickImage = async () => {
     try {
@@ -129,58 +144,57 @@ const fetchUserProfile = async (token) => {
     }
   };
 
-  
-// Function to update user profile with new image
-const updateProfile = async () => {
-  try {
-    setIsLoading(true);
-    
-    const tokenData = await getToken();
-    if (!tokenData || !tokenData.authToken) {
-      Alert.alert('Error', 'You need to be logged in to update your profile');
-      return;
-    }
-    
-    // Convert phone number and zip code to numbers if they're numeric strings
-    const formattedData = {
-      ...profileForm,
-      phoneNumber: parseInt(profileForm.phoneNumber, 10),
-      zipCode: parseInt(profileForm.zipCode, 10)
-    };
-    
-    // If there's a new profile image, add it to the request body
-    if (newProfileImage) {
-      formattedData.profileImage = newProfileImage;
-    }
-    
-    const response = await axios.put(
-      `${baseURL}/api/auth/profile/update`,
-      formattedData,
-      {
-        headers: {
-          Authorization: `Bearer ${tokenData.authToken}`,
-          'Content-Type': 'application/json'
-        }
+  // Function to update user profile with new image
+  const updateProfile = async () => {
+    try {
+      setIsLoading(true);
+      
+      const tokenData = await getToken();
+      if (!tokenData || !tokenData.authToken) {
+        Alert.alert('Error', 'You need to be logged in to update your profile');
+        return;
       }
-    );
-    
-    if (response.data && response.data.success) {
-      Alert.alert('Success', 'Profile updated successfully');
-      // Refresh profile data
-      fetchUserProfile(tokenData.authToken);
-      setIsModalVisible(false);
-    } else {
-      Alert.alert('Error', response.data?.message || 'Failed to update profile');
+      
+      // Convert phone number and zip code to numbers if they're numeric strings
+      const formattedData = {
+        ...profileForm,
+        phoneNumber: parseInt(profileForm.phoneNumber, 10),
+        zipCode: parseInt(profileForm.zipCode, 10)
+      };
+      
+      // If there's a new profile image, add it to the request body
+      if (newProfileImage) {
+        formattedData.profileImage = newProfileImage;
+      }
+      
+      const response = await axios.put(
+        `${baseURL}/api/auth/profile/update`,
+        formattedData,
+        {
+          headers: {
+            Authorization: `Bearer ${tokenData.authToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        Alert.alert('Success', 'Profile updated successfully');
+        // Refresh profile data
+        fetchUserProfile(tokenData.authToken);
+        setIsModalVisible(false);
+      } else {
+        Alert.alert('Error', response.data?.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
-  // Check login status and fetch profile when component mounts
+  // Check login status and fetch profile and orders when component mounts
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
@@ -189,6 +203,9 @@ const updateProfile = async () => {
           setIsLoggedIn(true);
           // Fetch user profile data
           fetchUserProfile(tokenData.authToken);
+          
+          // Fetch user orders via Redux
+          dispatch(fetchUserOrders());
         } else {
           setIsLoggedIn(false);
         }
@@ -199,7 +216,16 @@ const updateProfile = async () => {
     };
 
     checkLoginStatus();
-  }, []);
+    
+    // Refresh orders when the component is focused
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (isLoggedIn) {
+        dispatch(fetchUserOrders());
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigation, dispatch, isLoggedIn]);
 
   const handleLoginPress = () => {
     navigation.navigate('Auth', { screen: 'Login' });
@@ -213,6 +239,8 @@ const updateProfile = async () => {
     try {
       await removeToken();
       setIsLoggedIn(false);
+      // Clear orders from Redux store
+      dispatch(clearOrders());
       Alert.alert('Success', 'You have been logged out successfully.');
     } catch (error) {
       console.error('Error during logout:', error);
@@ -224,6 +252,26 @@ const updateProfile = async () => {
   const handleEditProfile = () => {
     setNewProfileImage(null);
     setIsModalVisible(true);
+  };
+
+  // Navigate to order status screen
+  const navigateToOrderStatus = (status) => {
+    navigation.navigate('Orders', { status });
+  };
+
+  // Function to render badges with counts
+  const renderCountBadge = (countKey) => {
+    const count = orderCounts[countKey] || 0;
+    
+    if (count > 0) {
+      return (
+        <View style={styles.countBadge}>
+          <Text style={styles.countText}>{count}</Text>
+        </View>
+      );
+    }
+    
+    return null;
   };
 
   return (
@@ -238,14 +286,14 @@ const updateProfile = async () => {
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
               <Image
-              source={{ uri: userData.avatar }}
-              style={styles.avatar}
-              onError={(e) => {
-                console.log('Error loading avatar:', e.nativeEvent.error);
-                // If image fails to load, set to default
-                setUserData(prev => ({...prev, avatar: 'https://via.placeholder.com/150'}));
-              }}
-            />
+                source={{ uri: userData.avatar }}
+                style={styles.avatar}
+                onError={(e) => {
+                  console.log('Error loading avatar:', e.nativeEvent.error);
+                  // If image fails to load, set to default
+                  setUserData(prev => ({...prev, avatar: 'https://via.placeholder.com/150'}));
+                }}
+              />
             )}
             <View style={styles.userTextContainer}>
               <Text style={styles.welcomeText}>Welcome back</Text>
@@ -361,11 +409,13 @@ const updateProfile = async () => {
                 <TouchableOpacity
                   key={index}
                   style={styles.statusItem}
-                  onPress={() => console.log(`Navigate to ${status.title}`)}
+                  onPress={() => navigateToOrderStatus(status.status)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.statusIconContainer}>
                     <Icon name={status.icon} size={24} color={COLORS.accent} />
+                    {/* Use the custom rendering function for the badge */}
+                    {renderCountBadge(status.countKey)}
                   </View>
                   <Text style={styles.statusText}>{status.title}</Text>
                 </TouchableOpacity>
@@ -380,35 +430,41 @@ const updateProfile = async () => {
                 <Icon name="clock-outline" size={20} color={COLORS.primary} />
                 <Text style={styles.sectionTitle}>Recent Orders</Text>
               </View>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
                 <Text style={styles.viewAllText}>View All</Text>
               </TouchableOpacity>
             </View>
             
             <View style={styles.ordersList}>
-              <TouchableOpacity style={styles.orderItem}>
-                <View style={[styles.orderIconBg, {backgroundColor: `${COLORS.success}20`}]}>
-                  <Icon name="package-variant" size={18} color={COLORS.success} />
-                </View>
-                <View style={styles.orderDetails}>
-                  <Text style={styles.orderTitle}>Order #2458</Text>
-                  <Text style={styles.orderSubtitle}>Delivered • April 1, 2025</Text>
-                </View>
-                <Text style={styles.orderPrice}>$124.99</Text>
-              </TouchableOpacity>
-              
-              <View style={styles.divider} />
-              
-              <TouchableOpacity style={styles.orderItem}>
-                <View style={[styles.orderIconBg, {backgroundColor: `${COLORS.warning}20`}]}>
-                  <Icon name="truck-delivery-outline" size={18} color={COLORS.warning} />
-                </View>
-                <View style={styles.orderDetails}>
-                  <Text style={styles.orderTitle}>Order #2457</Text>
-                  <Text style={styles.orderSubtitle}>Shipping • March 30, 2025</Text>
-                </View>
-                <Text style={styles.orderPrice}>$89.50</Text>
-              </TouchableOpacity>
+              {ordersLoading ? (
+                <ActivityIndicator size="small" color={COLORS.primary} style={{marginVertical: 20}} />
+              ) : (
+                <>
+                  <TouchableOpacity style={styles.orderItem}>
+                    <View style={[styles.orderIconBg, {backgroundColor: `${COLORS.success}20`}]}>
+                      <Icon name="package-variant" size={18} color={COLORS.success} />
+                    </View>
+                    <View style={styles.orderDetails}>
+                      <Text style={styles.orderTitle}>Order #2458</Text>
+                      <Text style={styles.orderSubtitle}>Delivered • April 1, 2025</Text>
+                    </View>
+                    <Text style={styles.orderPrice}>$124.99</Text>
+                  </TouchableOpacity>
+                  
+                  <View style={styles.divider} />
+                  
+                  <TouchableOpacity style={styles.orderItem}>
+                    <View style={[styles.orderIconBg, {backgroundColor: `${COLORS.warning}20`}]}>
+                      <Icon name="truck-delivery-outline" size={18} color={COLORS.warning} />
+                    </View>
+                    <View style={styles.orderDetails}>
+                      <Text style={styles.orderTitle}>Order #2457</Text>
+                      <Text style={styles.orderSubtitle}>Shipping • March 30, 2025</Text>
+                    </View>
+                    <Text style={styles.orderPrice}>$89.50</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
 
@@ -439,8 +495,8 @@ const updateProfile = async () => {
         </View>
       </ScrollView>
 
-       {/* Profile Edit Modal - Modified to remove camera option */}
-       <Modal
+      {/* Profile Edit Modal */}
+      <Modal
         visible={isModalVisible}
         transparent={true}
         animationType="slide"
@@ -454,17 +510,17 @@ const updateProfile = async () => {
               <ActivityIndicator size="large" color={COLORS.primary} style={{marginVertical: 20}} />
             ) : (
               <>
-                {/* Profile Image Section - Modified */}
+                {/* Profile Image Section */}
                 <View style={styles.profileImageContainer}>
-                <Image
-                      source={{ 
-                        uri: newProfileImage || userData.avatar 
-                      }}
-                      style={styles.profileImagePreview}
-                      onError={(e) => {
-                        console.log('Error loading profile image preview:', e.nativeEvent.error);
-                      }}
-                    />
+                  <Image
+                    source={{ 
+                      uri: newProfileImage || userData.avatar 
+                    }}
+                    style={styles.profileImagePreview}
+                    onError={(e) => {
+                      console.log('Error loading profile image preview:', e.nativeEvent.error);
+                    }}
+                  />
                   <TouchableOpacity
                     style={[styles.imageButton, {width: '80%', marginTop: 10}]}
                     onPress={pickImage}
@@ -513,7 +569,7 @@ const updateProfile = async () => {
                     onChangeText={(text) => setProfileForm({...profileForm, address: text})}
                     placeholder="Address"
                   />
-                  </View>
+                </View>
                 
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>Zip Code</Text>

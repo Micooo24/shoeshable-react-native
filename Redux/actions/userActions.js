@@ -17,7 +17,7 @@ export const fetchUserOrders = () => {
       
       // Fetch orders from the API
       const response = await axios.get(
-        `${baseURL}/api/orders/user`,
+        `${baseURL}/api/users/orders`,
         {
           headers: {
             Authorization: `Bearer ${tokenData.authToken}`
@@ -41,9 +41,8 @@ export const fetchUserOrders = () => {
   };
 };
 
-// Action to clear orders (used during logout)
 export const clearOrders = () => {
-  return {
-    type: CLEAR_ORDERS
+    return {
+      type: CLEAR_ORDERS
+    };
   };
-};
