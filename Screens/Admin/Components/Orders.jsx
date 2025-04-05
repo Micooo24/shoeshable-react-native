@@ -30,6 +30,7 @@ const Order = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
+  const [updatingStatus, setUpdatingStatus] = useState(false); // New state for tracking status updates
   
   const statusOptions = ['All', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
   
@@ -90,17 +91,19 @@ const Order = () => {
     fetchOrders();
   };
   
+  // Update order status function
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      setLoading(true);
+      setUpdatingStatus(true); // Use separate state for update loading
       const tokenData = await getToken();
       
-      // Add a field to control notifications (optional)
+      console.log(`Updating order ${orderId} to status: ${newStatus}`);
+      
       const response = await axios.put(`${baseURL}/api/orders/update/${orderId}`, 
         { 
           status: newStatus,
           orderStatus: newStatus,
-          sendNotification: true // Flag to control notification sending
+          sendNotification: true
         },
         {
           headers: {
@@ -109,20 +112,41 @@ const Order = () => {
         }
       );
       
-      // Rest of your code remains the same
+      if (response.data.success) {
+        console.log('Update successful:', response.data);
+        
+        // Update the local state to reflect the change
+        const updatedOrders = orders.map(order => 
+          order._id === orderId 
+            ? { ...order, orderStatus: newStatus } 
+            : order
+        );
+        
+        setOrders(updatedOrders);
+        
+        // Also update the selected order if it's open in modal
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder({...selectedOrder, orderStatus: newStatus});
+        }
+        
+        Alert.alert('Success', `Order status updated to ${newStatus}`);
+        setModalVisible(false); // Close the modal on success
+      } else {
+        Alert.alert('Error', response.data.message || 'Failed to update order status');
+      }
+      
+      setUpdatingStatus(false);
     } catch (error) {
-      // Enhanced error logging
       console.error('Error updating order status:', error);
       console.log('Error response data:', error.response?.data);
       
-      // Show different message if it's a notification error
       const isNotificationError = error.response?.data?.notificationError;
       const errorMsg = isNotificationError 
         ? `Order status updated but notification failed: ${error.response?.data?.message || error.message}`
         : error.response?.data?.message || error.message || 'An error occurred while updating order status';
       
       Alert.alert(isNotificationError ? 'Partial Success' : 'Error', errorMsg);
-      setLoading(false);
+      setUpdatingStatus(false);
     }
   };
   
@@ -134,12 +158,20 @@ const Order = () => {
     return orders.filter(order => order.orderStatus === statusFilter);
   };
   
-  // View order details
+  // View order details function with debug logs
   const viewOrderDetails = (order) => {
+    console.log('View order details clicked:', order._id);
     setSelectedOrder(order);
     setModalVisible(true);
+    console.log('Modal should be visible now:', modalVisible);
   };
   
+  // Make sure the orders list is used as the dependency for filtered orders
+  useEffect(() => {
+    console.log(`Filtered orders for status: ${statusFilter}`);
+  }, [statusFilter, orders]);
+  
+  // Fetch orders on component mount
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -205,179 +237,6 @@ const Order = () => {
     );
   };
   
-  // Order details modal
-  const OrderDetailsModal = () => {
-    if (!selectedOrder) return null;
-    
-    return (
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Order Details</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Icon name="close" size={24} color={COLORS.text} />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.modalBody}>
-              {/* Order ID and Date */}
-              <View style={styles.detailsCard}>
-                <Text style={styles.detailsCardTitle}>Order Information</Text>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Order ID:</Text>
-                  <Text style={styles.detailsValue}>
-                    #{selectedOrder._id.substring(selectedOrder._id.length - 8)}
-                  </Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Date:</Text>
-                  <Text style={styles.detailsValue}>
-                    {formatDate(selectedOrder.createdAt)}
-                  </Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Status:</Text>
-                  <View style={[
-                    styles.detailsStatusBadge,
-                    { backgroundColor: getStatusColor(selectedOrder.orderStatus).background }
-                  ]}>
-                    <Text style={[
-                      styles.detailsStatusText,
-                      { color: getStatusColor(selectedOrder.orderStatus).text }
-                    ]}>
-                      {selectedOrder.orderStatus}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              
-              {/* Customer Information */}
-              <View style={styles.detailsCard}>
-                <Text style={styles.detailsCardTitle}>Customer Information</Text>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Name:</Text>
-                  <Text style={styles.detailsValue}>
-                    {selectedOrder.shippingInfo.firstName} {selectedOrder.shippingInfo.lastName}
-                  </Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Email:</Text>
-                  <Text style={styles.detailsValue}>
-                    {selectedOrder.user.email}
-                  </Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Phone:</Text>
-                  <Text style={styles.detailsValue}>
-                    {selectedOrder.shippingInfo.phoneNumber}
-                  </Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Address:</Text>
-                  <Text style={styles.detailsValue}>
-                    {selectedOrder.shippingInfo.address}, {selectedOrder.shippingInfo.zipCode}
-                  </Text>
-                </View>
-              </View>
-              
-              {/* Order Items */}
-              <View style={styles.detailsCard}>
-                <Text style={styles.detailsCardTitle}>Order Items</Text>
-                {selectedOrder.orderItems.map((item, index) => (
-                  <View key={index} style={styles.orderItemCard}>
-                    <Image 
-                      source={{ uri: item.productImage }} 
-                      style={styles.productImage}
-                    />
-                    <View style={styles.productDetails}>
-                      <Text style={styles.productName}>{item.productName}</Text>
-                      <Text style={styles.productVariants}>
-                        Size: {item.size} | Color: {item.color}
-                      </Text>
-                      <View style={styles.productPriceRow}>
-                        <Text style={styles.productPrice}>
-                          ₱{item.productPrice?.toLocaleString()}
-                        </Text>
-                        <Text style={styles.productQuantity}>x{item.quantity}</Text>
-                      </View>
-                    </View>
-                  </View>
-                ))}
-              </View>
-              
-              {/* Payment Details */}
-              <View style={styles.detailsCard}>
-                <Text style={styles.detailsCardTitle}>Payment Details</Text>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Method:</Text>
-                  <Text style={styles.detailsValue}>
-                    {selectedOrder.paymentInfo.method}
-                  </Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Subtotal:</Text>
-                  <Text style={styles.detailsValue}>
-                    ₱{selectedOrder.subtotal?.toLocaleString()}
-                  </Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.detailsLabel}>Shipping Fee:</Text>
-                  <Text style={styles.detailsValue}>
-                    ₱{selectedOrder.shippingFee?.toLocaleString()}
-                  </Text>
-                </View>
-                {selectedOrder.voucher && (
-                  <View style={styles.detailsRow}>
-                    <Text style={styles.detailsLabel}>Discount:</Text>
-                    <Text style={styles.discountValue}>
-                      -₱{selectedOrder.discountAmount?.toLocaleString()} ({selectedOrder.voucher.code})
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total:</Text>
-                  <Text style={styles.totalValue}>
-                    ₱{selectedOrder.totalPrice?.toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-              
-              {/* Update Status */}
-              <View style={styles.detailsCard}>
-                <Text style={styles.detailsCardTitle}>Update Order Status</Text>
-                <View style={styles.statusPickerContainer}>
-                  <Picker
-                    selectedValue={selectedOrder.orderStatus}
-                    style={styles.statusPicker}
-                    onValueChange={(itemValue) => {
-                      setSelectedOrder({...selectedOrder, orderStatus: itemValue});
-                    }}
-                  >
-                    {statusOptions.filter(option => option !== 'All').map((status, index) => (
-                      <Picker.Item key={index} label={status} value={status} />
-                    ))}
-                  </Picker>
-                </View>
-                <TouchableOpacity 
-                  style={styles.updateButton}
-                  onPress={() => updateOrderStatus(selectedOrder._id, selectedOrder.orderStatus)}
-                >
-                  <Text style={styles.updateButtonText}>Update Status</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-  
   // Helper function to get status colors
   const getStatusColor = (status) => {
     switch (status) {
@@ -394,6 +253,196 @@ const Order = () => {
       default:
         return { background: '#F5F5F5', text: '#8C8C8C' };
     }
+  };
+  
+  // Render order details modal as a function instead of a component
+  const renderOrderDetailsModal = () => {
+    console.log('Rendering modal, visible:', modalVisible, 'selected order:', selectedOrder ? selectedOrder._id : 'none');
+    
+    return (
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        {selectedOrder ? (
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Order Details</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Icon name="close" size={24} color={COLORS.text} />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.modalBody}>
+                {/* Order ID and Date */}
+                <View style={styles.detailsCard}>
+                  <Text style={styles.detailsCardTitle}>Order Information</Text>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Order ID:</Text>
+                    <Text style={styles.detailsValue}>
+                      #{selectedOrder._id.substring(selectedOrder._id.length - 8)}
+                    </Text>
+                  </View>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Date:</Text>
+                    <Text style={styles.detailsValue}>
+                      {formatDate(selectedOrder.createdAt)}
+                    </Text>
+                  </View>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Status:</Text>
+                    <View style={[
+                      styles.detailsStatusBadge,
+                      { backgroundColor: getStatusColor(selectedOrder.orderStatus).background }
+                    ]}>
+                      <Text style={[
+                        styles.detailsStatusText,
+                        { color: getStatusColor(selectedOrder.orderStatus).text }
+                      ]}>
+                        {selectedOrder.orderStatus}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                
+                {/* Customer Information */}
+                <View style={styles.detailsCard}>
+                  <Text style={styles.detailsCardTitle}>Customer Information</Text>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Name:</Text>
+                    <Text style={styles.detailsValue}>
+                      {selectedOrder.shippingInfo.firstName} {selectedOrder.shippingInfo.lastName}
+                    </Text>
+                  </View>
+                  {selectedOrder.user && selectedOrder.user.email && (
+                    <View style={styles.detailsRow}>
+                      <Text style={styles.detailsLabel}>Email:</Text>
+                      <Text style={styles.detailsValue}>
+                        {selectedOrder.user.email}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Phone:</Text>
+                    <Text style={styles.detailsValue}>
+                      {selectedOrder.shippingInfo.phoneNumber}
+                    </Text>
+                  </View>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Address:</Text>
+                    <Text style={styles.detailsValue}>
+                      {selectedOrder.shippingInfo.address}, {selectedOrder.shippingInfo.zipCode}
+                    </Text>
+                  </View>
+                </View>
+                
+                {/* Order Items */}
+                <View style={styles.detailsCard}>
+                  <Text style={styles.detailsCardTitle}>Order Items</Text>
+                  {selectedOrder.orderItems.map((item, index) => (
+                    <View key={index} style={styles.orderItemCard}>
+                      <Image 
+                        source={{ uri: item.productImage }} 
+                        style={styles.productImage}
+                      />
+                      <View style={styles.productDetails}>
+                        <Text style={styles.productName}>{item.productName}</Text>
+                        <Text style={styles.productVariants}>
+                          Size: {item.size} | Color: {item.color}
+                        </Text>
+                        <View style={styles.productPriceRow}>
+                          <Text style={styles.productPrice}>
+                            ₱{item.productPrice?.toLocaleString()}
+                          </Text>
+                          <Text style={styles.productQuantity}>x{item.quantity}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+                
+                {/* Payment Details */}
+                <View style={styles.detailsCard}>
+                  <Text style={styles.detailsCardTitle}>Payment Details</Text>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Method:</Text>
+                    <Text style={styles.detailsValue}>
+                      {selectedOrder.paymentInfo.method}
+                    </Text>
+                  </View>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Subtotal:</Text>
+                    <Text style={styles.detailsValue}>
+                      ₱{selectedOrder.subtotal?.toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Shipping Fee:</Text>
+                    <Text style={styles.detailsValue}>
+                      ₱{selectedOrder.shippingFee?.toLocaleString()}
+                    </Text>
+                  </View>
+                  {selectedOrder.voucher && (
+                    <View style={styles.detailsRow}>
+                      <Text style={styles.detailsLabel}>Discount:</Text>
+                      <Text style={styles.discountValue}>
+                        -₱{selectedOrder.discountAmount?.toLocaleString()} ({selectedOrder.voucher.code})
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Total:</Text>
+                    <Text style={styles.totalValue}>
+                      ₱{selectedOrder.totalPrice?.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+                
+                {/* Update Status */}
+                <View style={styles.detailsCard}>
+                  <Text style={styles.detailsCardTitle}>Update Order Status</Text>
+                  <View style={styles.statusPickerContainer}>
+                    <Picker
+                      selectedValue={selectedOrder.orderStatus}
+                      style={styles.statusPicker}
+                      enabled={!updatingStatus}
+                      onValueChange={(itemValue) => {
+                        setSelectedOrder({...selectedOrder, orderStatus: itemValue});
+                      }}
+                    >
+                      {statusOptions.filter(option => option !== 'All').map((status, index) => (
+                        <Picker.Item key={index} label={status} value={status} />
+                      ))}
+                    </Picker>
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.updateButton, updatingStatus && styles.updateButtonDisabled]}
+                    onPress={() => updateOrderStatus(selectedOrder._id, selectedOrder.orderStatus)}
+                    disabled={updatingStatus}
+                  >
+                    {updatingStatus ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.updateButtonText}>Update Status</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text>Loading order details...</Text>
+            </View>
+          </View>
+        )}
+      </Modal>
+    );
   };
   
   return (
@@ -427,7 +476,7 @@ const Order = () => {
       </View>
       
       {/* Orders list */}
-      {loading ? (
+      {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading orders...</Text>
@@ -453,8 +502,8 @@ const Order = () => {
         />
       )}
       
-      {/* Order details modal */}
-      <OrderDetailsModal />
+      {/* Render order details modal */}
+      {renderOrderDetailsModal()}
     </View>
   );
 };
