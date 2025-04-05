@@ -272,5 +272,30 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 12,
     marginTop: 4,
-  }
+  },
+  imageSection: {
+    width: '100%',
+  },
+  thumbnailContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  thumbnailWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+  },
+  selectedThumbnail: {
+    borderColor: COLORS.primary,
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+
 });

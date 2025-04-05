@@ -14,7 +14,7 @@ import { getToken } from '../../sqlite_db/Auth';
 import { jwtDecode } from 'jwt-decode';
 import createCartHandlers, { 
   getProductId, getProductName, getProductPrice, getProductImage, calculateSubtotal 
-} from '../../utils/cartHandlers';
+} from '../../Utils/cartHandlers';
 
 const CartScreen = ({ navigation }) => {
   const dispatch = useDispatch();

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image,  ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Dimensions, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { styles } from '../../Styles/singleProduct.js';
@@ -13,6 +13,12 @@ const DisplaySingleProduct = ({ route, navigation }) => {
   const { product } = route.params;
   console.log('Product:', product); // Log the product details for debugging
   const dispatch = useDispatch(); // Initialize dispatch
+  
+  // State for selected size and color
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0); // Add state for image selection
+  
   const getBrandIcon = (brand) => {
     if (!brand) return <FontAwesome5 name="tag" size={18} color={COLORS.primary} />;
     
@@ -64,10 +70,6 @@ const DisplaySingleProduct = ({ route, navigation }) => {
     }
   };
 
-  // State for selected size and color
-  const [selectedSize, setSelectedSize] = useState(null);
-  const [selectedColor, setSelectedColor] = useState(null);
-
   // Handle size selection
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
@@ -78,6 +80,10 @@ const DisplaySingleProduct = ({ route, navigation }) => {
     setSelectedColor(color);
   };
 
+  // Handle image selection
+  const handleImageSelect = (index) => {
+    setSelectedImageIndex(index);
+  };
 
   const handleSubmit = async () => {
     try {
@@ -128,7 +134,7 @@ const DisplaySingleProduct = ({ route, navigation }) => {
         console.error('Error adding to cart:', error);
         Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     }
-};
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -146,65 +152,104 @@ const DisplaySingleProduct = ({ route, navigation }) => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Main Image */}
-        <View style={styles.imageContainer}>
-          {product.image && product.image.length > 0 ? (
-            <Image
-              source={{
-                uri: typeof product.image[0] === 'string'
-                  ? product.image[0]
-                  : (product.image[0] && product.image[0].uri ? product.image[0].uri : null),
-              }}
-              style={styles.mainImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Icon name="shoe-sneaker" size={80} color={COLORS.primaryLight} />
-            </View>
+        {/* Image Section */}
+        <View style={styles.imageSection}>
+          {/* Main Image */}
+          <View style={styles.imageContainer}>
+            {product.image && product.image.length > 0 ? (
+              <Image
+                source={{
+                  uri: typeof product.image[selectedImageIndex] === 'string'
+                    ? product.image[selectedImageIndex]
+                    : (product.image[selectedImageIndex] && product.image[selectedImageIndex].uri 
+                      ? product.image[selectedImageIndex].uri 
+                      : null),
+                }}
+                style={styles.mainImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Icon name="shoe-sneaker" size={80} color={COLORS.primaryLight} />
+              </View>
+            )}
+          </View>
+          
+          {/* Image Selector - Only show if there are multiple images */}
+          {product.image && product.image.length > 1 && (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbnailContainer}
+            >
+              {product.image.map((img, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.thumbnailWrapper,
+                    selectedImageIndex === index && styles.selectedThumbnail,
+                  ]}
+                  onPress={() => handleImageSelect(index)}
+                >
+                  <Image
+                    source={{
+                      uri: typeof img === 'string'
+                        ? img
+                        : (img && img.uri ? img.uri : null),
+                    }}
+                    style={styles.thumbnailImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           )}
         </View>
 
         {/* Product Information */}
         <View style={styles.productInfoContainer}>
-        <Text style={styles.productName}>{product.name}</Text>
-
-              
-        {/* Brand Icon */}
-        <View style={styles.metadataItem}>
-          {getBrandIcon(product.brand)}
-          <Text style={styles.metadataText}>
-            <Text style={styles.metadataLabel}>Brand: </Text>
-            {product.brand || 'Unknown'}
+          <Text style={styles.productName}>{product.name}</Text>
+          
+          {/* Price information */}
+          <Text style={styles.priceText}>
+            ₱{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}
           </Text>
-        </View>
+                
+          {/* Brand Icon */}
+          <View style={styles.metadataItem}>
+            {getBrandIcon(product.brand)}
+            <Text style={styles.metadataText}>
+              <Text style={styles.metadataLabel}>Brand: </Text>
+              {product.brand || 'Unknown'}
+            </Text>
+          </View>
 
           {/* Category Icon */}
           <View style={styles.metadataItem}>
-          {getCategoryIcon(product.category)}
-          <Text style={styles.metadataText}>
-            <Text style={styles.metadataLabel}>Category: </Text>
-            {product.category || 'Unknown'}
-          </Text>
-        </View>
+            {getCategoryIcon(product.category)}
+            <Text style={styles.metadataText}>
+              <Text style={styles.metadataLabel}>Category: </Text>
+              {product.category || 'Unknown'}
+            </Text>
+          </View>
 
           {/* Gender Icon */}
           <View style={styles.metadataItem}>
-          {getGenderIcon(product.gender)}
-          <Text style={styles.metadataText}>
-            <Text style={styles.metadataLabel}>Gender: </Text>
-            {product.gender || 'Unisex'}
-          </Text>
-        </View>
+            {getGenderIcon(product.gender)}
+            <Text style={styles.metadataText}>
+              <Text style={styles.metadataLabel}>Gender: </Text>
+              {product.gender || 'Unisex'}
+            </Text>
+          </View>
 
-      {/* Material Icon */}
-      <View style={styles.metadataItem}>
-        <Icon name="cube-outline" size={18} color={COLORS.primary} />
-        <Text style={styles.metadataText}>
-          <Text style={styles.metadataLabel}>Material: </Text>
-          {product.material.toLowerCase() ? product.material : 'unknown'}
-        </Text>
-      </View>
+          {/* Material Icon */}
+          <View style={styles.metadataItem}>
+            <Icon name="cube-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.metadataText}>
+              <Text style={styles.metadataLabel}>Material: </Text>
+              {product.material ? product.material : 'Unknown'}
+            </Text>
+          </View>
 
           {/* Available Sizes */}
           <View style={styles.sizesContainer}>
@@ -259,6 +304,12 @@ const DisplaySingleProduct = ({ route, navigation }) => {
                 ))}
             </View>
           </View>
+
+          {/* Product Description */}
+          <View style={styles.descriptionContainer}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.descriptionText}>{product.description}</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -301,5 +352,6 @@ const DisplaySingleProduct = ({ route, navigation }) => {
     </SafeAreaView>
   );
 };
+
 
 export default DisplaySingleProduct;
