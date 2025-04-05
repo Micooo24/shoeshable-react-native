@@ -12,5 +12,13 @@ export const COLORS = {
     warning: '#f39c12',      
     danger: '#e74c3c',       
     shadow: 'rgba(44, 62, 80, 0.15)', 
-    accent: '#3498db',       
+    accent: '#3498db',     
+    
+    transparent: 'transparent',
+    headerBackground: '#ffffff',
+    categoryBackground: '#f5f7fa',
+    border: '#e1e8ed',
+    selectedCategoryBackground: '#e6f2ff',
+    selectedBorder: '#3498db',
+    selectedText: '#3498db'
   };

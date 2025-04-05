@@ -97,13 +97,13 @@ exports.Register = async function (req, res) {
 };
 
 
-//Login with email and  password comparison to the backend
+//Login with email and password comparison to the backend
 exports.Login = async function (req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const { email, password } = req.body;
+        const { email, password, fcmToken } = req.body; // Add fcmToken to destructuring
 
         // Check if email and password are provided
         if (!email || !password) {
@@ -122,10 +122,15 @@ exports.Login = async function (req, res) {
             return res.status(401).json({ message: 'Invalid Email or Password' });
         }
 
+        // Update FCM token if provided
+        if (fcmToken) {
+            user.fcmToken = fcmToken;
+            await user.save({ session });
+            console.log("FCM Token updated during regular login:", fcmToken);
+        }
+
         // Generate JWT token
         const token = user.getJwtToken();
-
-        console.log(token)
 
         // Commit the transaction
         await session.commitTransaction();
@@ -150,13 +155,16 @@ exports.Login = async function (req, res) {
 //Google Login with Firebase UID and created credentials through database 
 exports.googleLogin = async function (req, res) {
     try {
-        const { idToken, firebaseUid } = req.body; // Receive firebaseUid from the frontend
+        const { idToken, firebaseUid, fcmToken } = req.body; // Add fcmToken here
         console.log("Received Firebase UID:", firebaseUid);
+        if (fcmToken) {
+            console.log("Received FCM Token:", fcmToken);
+        }
 
         // Verify the ID token using Google Auth Library
         const ticket = await client.verifyIdToken({
             idToken,
-            audience: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com', // Replace with your webClientId
+            audience: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com',
         });
 
         const payload = ticket.getPayload();
@@ -169,22 +177,23 @@ exports.googleLogin = async function (req, res) {
 
             // Create a new User instance with default values
             user = new User({
-                username: email.split("@")[0], // Use email prefix as username
+                username: email.split("@")[0],
                 email,
-                firebaseUid, // Save the Firebase UID in the database
+                firebaseUid,
                 firstName: name.split(" ")[0],
                 lastName: name.split(" ").slice(1).join(" "),
-                phoneNumber: "00000000000", // Default phone number
-                address: "Default Address", // Default address
-                zipCode: "0000", // Default zip code
+                phoneNumber: "00000000000",
+                address: "Default Address",
+                zipCode: "0000",
                 profileImage: {
                     public_id: "register/users/google-login-profile",
-                    url: photoURL || "https://default-profile-image-url.com/default-profile.png", // Use a default image if none provided
+                    url: photoURL || "https://default-profile-image-url.com/default-profile.png",
                 },
+                fcmToken: fcmToken // Store FCM token for new users
             });
 
             await user.save();
-            console.log("New user created and saved:", user);
+            console.log("New user created and saved with FCM token:", fcmToken || "none provided");
         } else {
             console.log("User found:", user);
 
@@ -192,6 +201,12 @@ exports.googleLogin = async function (req, res) {
             user.phoneNumber = user.phoneNumber || "00000000000";
             user.address = user.address || "Default Address";
             user.zipCode = user.zipCode || "0000";
+            
+            // Update FCM token for existing users if provided
+            if (fcmToken) {
+                user.fcmToken = fcmToken;
+                console.log("FCM Token updated for existing user:", fcmToken);
+            }
 
             // Save any updates to the user
             await user.save();
@@ -209,11 +224,12 @@ exports.googleLogin = async function (req, res) {
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
-            phoneNumber: user.phoneNumber, // Include phoneNumber
-            address: user.address, // Include address
-            zipCode: user.zipCode, // Include zipCode
-            profileImage: user.profileImage, // Include profileImage
-            firebaseUid: user.firebaseUid, // Include Firebase UID in the response
+            phoneNumber: user.phoneNumber,
+            address: user.address,
+            zipCode: user.zipCode,
+            profileImage: user.profileImage,
+            firebaseUid: user.firebaseUid,
+            fcmToken: user.fcmToken // Include FCM token in response
         });
     } catch (error) {
         console.error("Error during Google login:", error);
@@ -221,6 +237,46 @@ exports.googleLogin = async function (req, res) {
     }
 };
 
+
+//FCM Token Store and Update
+exports.updateFCMToken = async function (req, res) {
+    try {
+        const { fcmToken } = req.body;
+        
+        if (!fcmToken) {
+            return res.status(400).json({ 
+                success: false,
+                message: "FCM token is required" 
+            });
+        }
+        
+        // Update the FCM token for the authenticated user
+        const user = await User.findByIdAndUpdate(
+            req.user.id, 
+            { fcmToken }, 
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ 
+                success: false,
+                message: "User not found" 
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "FCM token updated successfully"
+        });
+    } catch (error) {
+        console.error("Error updating FCM token:", error);
+        res.status(500).json({ 
+            success: false,
+            message: "Error updating FCM token", 
+            error: error.message 
+        });
+    }
+};
 //Get User data via middleware
 exports.getUserData= async function (req, res, next) {
     try {

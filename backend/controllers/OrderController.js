@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
-
+const { sendPushNotification } = require('../firebase_backend/firebaseAdmin');
+const User = require('../models/User'); 
 // Create new order
 exports.createOrder = async (req, res) => {
     try {
@@ -192,6 +193,59 @@ exports.updateOrder = async (req, res) => {
 
         await order.save();
         console.log('Order successfully updated to status:', newStatus);
+
+        // Send push notification to the user
+        try {
+            // Get the user associated with this order
+            const user = await User.findById(order.user);
+            
+            if (user && user.fcmToken) {
+                console.log('Sending push notification to user:', user._id);
+                console.log('FCM Token:', user.fcmToken);
+                
+                // Create notification message based on order status
+                let title = 'Order Update';
+                let body = '';
+                
+                switch(newStatus) {
+                    case 'Processing':
+                        body = `Your order #${order._id.toString().slice(-6)} is now being processed.`;
+                        break;
+                    case 'Confirmed':
+                        body = `Your order #${order._id.toString().slice(-6)} has been confirmed.`;
+                        break;
+                    case 'Shipped':
+                        body = `Good news! Your order #${order._id.toString().slice(-6)} has been shipped.`;
+                        break;
+                    case 'Delivered':
+                        body = `Your order #${order._id.toString().slice(-6)} has been delivered. Thank you for shopping with us!`;
+                        break;
+                    case 'Cancelled':
+                        body = `Your order #${order._id.toString().slice(-6)} has been cancelled.`;
+                        break;
+                    default:
+                        body = `Your order #${order._id.toString().slice(-6)} status has been updated to ${newStatus}.`;
+                }
+                
+                // Send the notification
+                await sendPushNotification(
+                    user.fcmToken, 
+                    title, 
+                    body,
+                    {
+                        orderId: order._id.toString(),
+                        orderStatus: newStatus,
+                        screen: 'OrderDetail'
+                    }
+                );
+                console.log('Push notification sent successfully');
+            } else {
+                console.log('No FCM token available for user or user not found');
+            }
+        } catch (notificationError) {
+            // Log the error but don't fail the order update
+            console.error('Error sending push notification:', notificationError);
+        }
 
         res.status(200).json({
             success: true,

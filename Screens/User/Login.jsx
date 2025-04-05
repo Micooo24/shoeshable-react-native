@@ -16,6 +16,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
+import messaging from '@react-native-firebase/messaging'; // Add this import
 import { saveToken } from '../../sqlite_db/Auth';
 import baseURL from '../../assets/common/baseurl';
 import axios from 'axios';
@@ -28,6 +29,7 @@ const Login = ({ navigation }) => {
   });
   const [loading, setLoading] = useState(false);
   const [secureTextEntry, setSecureTextEntry] = useState(true);
+  const [fcmToken, setFcmToken] = useState(null);
 
   useEffect(() => {
     // Configure Google Sign-In
@@ -36,7 +38,37 @@ const Login = ({ navigation }) => {
       offlineAccess: true,
       forceCodeForRefreshToken: true,
     });
+    
+    // Get FCM token on component mount
+    getFCMToken();
   }, []);
+  
+  // Function to request notification permissions and get FCM token
+  const getFCMToken = async () => {
+    try {
+      // Request permission
+      const authStatus = await messaging().requestPermission();
+      const enabled = 
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED || 
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+      if (enabled) {
+        console.log('Authorization status:', authStatus);
+        
+        // Get FCM token
+        const token = await messaging().getToken();
+        console.log('FCM Token:', token);
+        setFcmToken(token);
+        return token;
+      }
+      
+      console.log('User notification permission denied');
+      return null;
+    } catch (error) {
+      console.error('Error getting FCM token:', error);
+      return null;
+    }
+  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -74,11 +106,15 @@ const Login = ({ navigation }) => {
       const firebaseUid = firebaseUser.user.uid; // Get the Firebase UID
   
       console.log('Firebase UID:', firebaseUid);
+      
+      // Get FCM token if not already available
+      const currentFcmToken = fcmToken || await getFCMToken();
   
-      // 5. Send ID token and firebaseUid to the backend
+      // 5. Send ID token, firebaseUid and FCM token to the backend
       const response = await axios.post(`${baseURL}/api/auth/google-login`, {
         idToken, // Send the ID token to the backend
         firebaseUid, // Pass the Firebase UID to the backend
+        fcmToken: currentFcmToken // Add the FCM token
       });
   
       // 6. Handle backend response
@@ -127,10 +163,14 @@ const Login = ({ navigation }) => {
     setLoading(true);
 
     try {
-      // Make a POST request to the backend login endpoint
+      // Get FCM token if not already available
+      const currentFcmToken = fcmToken || await getFCMToken();
+      
+      // Make a POST request to the backend login endpoint with FCM token
       const response = await axios.post(`${baseURL}/api/auth/login`, {
         email: formData.email,
         password: formData.password,
+        fcmToken: currentFcmToken // Include FCM token in login request
       });
 
       // Extract the token and user data from the response
@@ -167,6 +207,7 @@ const Login = ({ navigation }) => {
   const toggleSecureEntry = () => {
     setSecureTextEntry(!secureTextEntry);
   };
+
 
   return (
     <KeyboardAvoidingView 

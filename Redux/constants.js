@@ -32,3 +32,12 @@ export const DELETE_ORDER = 'DELETE_ORDER';
 // Order State Management
 export const SET_CURRENT_ORDER = 'SET_CURRENT_ORDER';
 export const CLEAR_ORDER = 'CLEAR_ORDER';
+
+
+export const CREATE_REVIEW = 'CREATE_REVIEW';
+export const GET_REVIEWS = 'GET_REVIEWS';
+export const GET_REVIEW = 'GET_REVIEW';
+export const UPDATE_REVIEW = 'UPDATE_REVIEW';
+export const DELETE_REVIEW = 'DELETE_REVIEW';
+export const SET_CURRENT_REVIEW = 'SET_CURRENT_REVIEW';
+export const CLEAR_REVIEW = 'CLEAR_REVIEW';

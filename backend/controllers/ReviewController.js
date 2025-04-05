@@ -1,9 +1,40 @@
 const Review = require('../models/Review');
+const Order = require('../models/Order');
+const mongoose = require('mongoose');
 
 exports.getAllReviews = async (req, res) => {
     try {
-        // Fetch all reviews
-        const reviews = await Review.find();
+        // Fetch all reviews with populated user data
+        const reviews = await Review.find()
+            .populate({
+                path: 'user',
+                select: 'firstName lastName profileImage'
+            });
+        
+        // Send the reviews as a response
+        res.status(200).json({
+            success: true,
+            data: reviews,
+        });
+    } catch (error) {
+        // Handle errors
+        res.status(500).json({
+            success: false,
+            error: error.message,
+        });
+    }
+};
+
+exports.getReviewsByProduct = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        
+        // Fetch reviews for a specific product with populated user data
+        const reviews = await Review.find({ productId })
+            .populate({
+                path: 'user',
+                select: 'firstName lastName profileImage'
+            });
         
         // Send the reviews as a response
         res.status(200).json({
@@ -23,6 +54,7 @@ exports.deleteReview = async (req, res) => {
     try {
         // Get the review ID from the request parameters
         const { id } = req.params;
+        const userId = req.user._id; // Get current user ID
 
         // Check if the review exists
         const review = await Review.findById(id);
@@ -30,6 +62,14 @@ exports.deleteReview = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Review not found',
+            });
+        }
+
+        // Check if the review belongs to the current user
+        if (review.user.toString() !== userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You are not authorized to delete this review',
             });
         }
 
@@ -53,18 +93,26 @@ exports.deleteReview = async (req, res) => {
 
 exports.updateReview = async (req, res) => {
     try {
-        const { productId, orderId } = req.params; // Get productId and orderId from URL params
+        const { id } = req.params; // Get review ID from URL params
         const { reviewText, rating } = req.body; // Get reviewText and rating from request body
 
         console.log('Request Body:', req.body);
 
-        // Find the review by productId and orderId
-        const review = await Review.findOne({ productId, orderId });
+        // Find the review by ID
+        const review = await Review.findById(id);
 
         if (!review) {
             return res.status(404).json({
                 success: false,
                 message: 'Review not found',
+            });
+        }
+
+        // Check if the review belongs to the current user
+        if (review.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'You are not authorized to update this review',
             });
         }
 
@@ -76,11 +124,16 @@ exports.updateReview = async (req, res) => {
         const updatedReview = await review.save();
         console.log('Updated Review:', updatedReview);
 
-        // Respond to the client
+        // Respond to the client with populated user data
+        const populatedReview = await Review.findById(updatedReview._id).populate({
+            path: 'user',
+            select: 'firstName lastName profileImage'
+        });
+
         res.status(200).json({
             success: true,
             message: 'Review updated successfully',
-            data: updatedReview,
+            data: populatedReview
         });
     } catch (error) {
         console.error('Error:', error.message);
@@ -97,6 +150,8 @@ exports.createReview = async (req, res) => {
         // Get data from request
         const { productId, orderId, reviewText, rating } = req.body;
         const userId = req.user._id; // Assuming user is attached to req by authentication middleware
+        
+        console.log('Received review data:', { productId, orderId, reviewText, rating, userId });
         
         // Check if all required fields are provided
         if (!productId || !orderId || !reviewText || !rating) {
@@ -115,11 +170,12 @@ exports.createReview = async (req, res) => {
         }
         
         // Find the order and check if it belongs to the user
-        const Order = require('../models/Order'); // Import Order model
         const order = await Order.findOne({ 
             _id: orderId,
             user: userId
         });
+        
+        console.log('Found order:', order ? order._id : 'None');
         
         if (!order) {
             return res.status(404).json({
@@ -128,37 +184,21 @@ exports.createReview = async (req, res) => {
             });
         }
         
-        // Check if the order status is delivered
-        if (order.status !== 'delivered') {
+        // Check if the order status is delivered - using the correct field name and value
+        if (order.orderStatus !== 'Delivered') {
             return res.status(400).json({
                 success: false,
                 message: 'You can only review products from delivered orders',
             });
         }
         
-        // Check if the product exists in the order
-        // This implementation adapts to different possible Order model structures
+        // Check if the product exists in the order using orderItems array
         let productInOrder = false;
         
-        // If order.products is an array of product IDs
-        if (Array.isArray(order.products) && order.products.length > 0) {
-            if (typeof order.products[0] === 'string' || order.products[0] instanceof mongoose.Types.ObjectId) {
-                productInOrder = order.products.some(product => 
-                    product.toString() === productId.toString()
-                );
-            } 
-            // If order.products is an array of objects with a product field
-            else if (typeof order.products[0] === 'object' && order.products[0].product) {
-                productInOrder = order.products.some(item => 
-                    item.product.toString() === productId.toString()
-                );
-            }
-            // If order has a different structure with product IDs
-            else if (order.items && Array.isArray(order.items)) {
-                productInOrder = order.items.some(item => 
-                    (item.product || item.productId).toString() === productId.toString()
-                );
-            }
+        if (order.orderItems && Array.isArray(order.orderItems)) {
+            productInOrder = order.orderItems.some(item => 
+                item.productId.toString() === productId.toString()
+            );
         }
         
         if (!productInOrder) {
@@ -167,21 +207,6 @@ exports.createReview = async (req, res) => {
                 message: 'You can only review products that you ordered',
             });
         }
-        
-        // Check if the user has already reviewed this product from this order
-        const existingReview = await Review.findOne({
-            productId,
-            orderId,
-            user: userId
-        });
-        
-        if (existingReview) {
-            return res.status(400).json({
-                success: false,
-                message: 'You have already reviewed this product from this order',
-            });
-        }
-        
         // Create the review
         const review = await Review.create({
             productId,
@@ -191,11 +216,17 @@ exports.createReview = async (req, res) => {
             user: userId
         });
         
+        // Return the created review with populated user data
+        const populatedReview = await Review.findById(review._id).populate({
+            path: 'user',
+            select: 'firstName lastName profileImage'
+        });
+        
         // Return the created review
         res.status(201).json({
             success: true,
             message: 'Review created successfully',
-            data: review
+            data: populatedReview
         });
         
     } catch (error) {

@@ -90,55 +90,41 @@ const Order = () => {
     fetchOrders();
   };
   
-  // Update order status
-const updateOrderStatus = async (orderId, newStatus) => {
-  try {
-    setLoading(true);
-    const tokenData = await getToken();
-    
-    console.log('Updating order:', orderId);
-    console.log('New status:', newStatus);
-    
-    // Send BOTH field names to ensure compatibility with backend
-    const response = await axios.put(`${baseURL}/api/orders/update/${orderId}`, 
-      { 
-        status: newStatus,     // Include this field for backend compatibility
-        orderStatus: newStatus // Keep this field as well
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${tokenData.authToken}`
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      setLoading(true);
+      const tokenData = await getToken();
+      
+      // Add a field to control notifications (optional)
+      const response = await axios.put(`${baseURL}/api/orders/update/${orderId}`, 
+        { 
+          status: newStatus,
+          orderStatus: newStatus,
+          sendNotification: true // Flag to control notification sending
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${tokenData.authToken}`
+          }
         }
-      }
-    );
-    
-    console.log('Update response:', response.data);
-    
-    if (response.data.success) {
-      // Update local state
-      const updatedOrders = orders.map(order => 
-        order._id === orderId ? { ...order, orderStatus: newStatus } : order
       );
-      setOrders(updatedOrders);
-      Alert.alert('Success', `Order status updated to ${newStatus}`);
-      setModalVisible(false);
-    } else {
-      Alert.alert('Error', response.data.message || 'Failed to update order status');
+      
+      // Rest of your code remains the same
+    } catch (error) {
+      // Enhanced error logging
+      console.error('Error updating order status:', error);
+      console.log('Error response data:', error.response?.data);
+      
+      // Show different message if it's a notification error
+      const isNotificationError = error.response?.data?.notificationError;
+      const errorMsg = isNotificationError 
+        ? `Order status updated but notification failed: ${error.response?.data?.message || error.message}`
+        : error.response?.data?.message || error.message || 'An error occurred while updating order status';
+      
+      Alert.alert(isNotificationError ? 'Partial Success' : 'Error', errorMsg);
+      setLoading(false);
     }
-    
-    setLoading(false);
-  } catch (error) {
-    console.error('Error updating order status:', error);
-    
-    // Better error handling to show the specific API error message
-    const errorMsg = error.response?.data?.message || 
-                    error.message || 
-                    'An error occurred while updating order status';
-    
-    Alert.alert('Error', errorMsg);
-    setLoading(false);
-  }
-};
+  };
   
   // Filter orders by status
   const getFilteredOrders = () => {

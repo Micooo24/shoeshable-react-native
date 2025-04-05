@@ -1,161 +1,533 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Dimensions, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Image, 
+  ScrollView, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  StatusBar, 
+  Dimensions, 
+  Alert,
+  Modal,
+  TextInput,
+  ActivityIndicator
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
-import { styles } from '../../Styles/singleProduct.js';
-import { COLORS } from '../../Theme/color.js';
-import { useDispatch } from 'react-redux'; // Import useDispatch
-import { addToCart } from '../../Redux/actions/cartActions'; // Import addToCart
-import { getToken } from '../../sqlite_db/Auth'; // Import getToken
-const { width } = Dimensions.get('window');
+import { FontAwesome5, MaterialIcons, AntDesign, Feather } from '@expo/vector-icons';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToCart } from '../../Redux/actions/cartActions';
+import { getToken } from '../../sqlite_db/Auth';
+import { getBrandIcon, getCategoryIcon, getGenderIcon } from '../../Utils/Icons/ProductIcons';
+import { COLORS } from '../../Theme/color';
+import { styles } from '../../Styles/singleProduct'; // Assuming you have a separate file for styles
+import { getAllReviews, createReview, updateReview, deleteReview } from '../../Redux/actions/reviewActions';
+import { getMyOrders } from '../../Redux/actions/orderActions';
+
+const { width, height } = Dimensions.get('window');
 
 const DisplaySingleProduct = ({ route, navigation }) => {
   const { product } = route.params;
-  console.log('Product:', product); // Log the product details for debugging
-  const dispatch = useDispatch(); // Initialize dispatch
+  const dispatch = useDispatch();
   
-  // State for selected size and color
+  // State for product details
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0); // Add state for image selection
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
-  const getBrandIcon = (brand) => {
-    if (!brand) return <FontAwesome5 name="tag" size={18} color={COLORS.primary} />;
+  // State for reviews
+  const [productReviews, setProductReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [canReview, setCanReview] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [reviewText, setReviewText] = useState('');
+  const [rating, setRating] = useState(5);
+  const [orderIdForReview, setOrderIdForReview] = useState(null);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [currentReviewId, setCurrentReviewId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [deletingReview, setDeletingReview] = useState(false);
+
+// Replace the useEffect and related functions with this improved version
+useEffect(() => {
+  const initializeData = async () => {
+    try {
+      // First get current user ID
+      const userId = await getCurrentUserId();
+      
+      if (userId) {
+        setCurrentUserId(userId);
+        console.log('Current user ID set:', userId);
+        
+        // Only fetch reviews and check eligibility after we have the user ID
+        await fetchProductReviews();
+        await checkIfUserCanReview();
+      } else {
+        console.warn('Could not obtain user ID, proceeding without it');
+        // Still fetch reviews even if we don't have a user ID
+        await fetchProductReviews();
+      }
+    } catch (error) {
+      console.error('Error during initialization:', error);
+      setLoading(false);
+    }
+  };
+  
+  initializeData();
+}, []);
+
+const getCurrentUserId = async () => {
+  try {
+    const tokenData = await getToken();
+    console.log('Token data received:', tokenData);
     
-    switch (brand.toLowerCase()) {
-      case 'nike':
-        return <FontAwesome5 name="nike" size={18} color={COLORS.primary} />;
-      case 'adidas':
-        return <FontAwesome5 name="stripe-s" size={18} color={COLORS.primary} />;
-      case 'jordan':
-        return <Icon name="basketball" size={18} color={COLORS.primary} />;
-      default:
-        return <FontAwesome5 name="tag" size={18} color={COLORS.primary} />;
+    if (!tokenData || !tokenData.authToken) {
+      console.log('No valid token found');
+      return null;
+    }
+    
+    // Get the actual token string
+    const jwtToken = tokenData.authToken;
+    console.log('JWT token:', jwtToken);
+    
+    try {
+      // For JWT tokens: Parse the token to get the payload
+      // JWT tokens consist of three parts: header.payload.signature
+      const parts = jwtToken.split('.');
+      if (parts.length === 3) {
+        // Decode the payload (middle part)
+        const payload = JSON.parse(atob(parts[1]));
+        console.log('Decoded token payload:', payload);
+        
+        // Extract user ID from common JWT payload locations
+        let userId = null;
+        if (payload.user && payload.user._id) {
+          userId = payload.user._id;
+        } else if (payload._id) {
+          userId = payload._id;
+        } else if (payload.id) {
+          userId = payload.id;
+        } else if (payload.sub) {
+          userId = payload.sub;  // Standard JWT subject claim
+        } else if (payload.userId) {
+          userId = payload.userId;
+        }
+        
+        if (userId) {
+          console.log('Found user ID in token payload:', userId);
+          return userId;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing JWT token:', e);
+    }
+    
+    // If we can't extract from JWT, make an API call as fallback
+    // This would be where you call your API with the token to get user info
+    console.log('Could not extract user ID from token, consider adding an API call');
+    return null;
+  } catch (error) {
+    console.error('Error getting current user:', error);
+    return null;
+  }
+};
+
+  const fetchProductReviews = async () => {
+    try {
+      const result = await dispatch(getAllReviews());
+      if (result) {
+        // Filter reviews for this specific product
+        const filteredReviews = result.filter(review => review.productId === product._id);
+        console.log(`Found ${filteredReviews.length} reviews for product ${product._id}`);
+        
+        // Log review details for debugging
+        filteredReviews.forEach((review, index) => {
+          console.log(`Review ${index + 1}:`, { 
+            id: review._id,
+            user: typeof review.user === 'object' ? review.user._id : review.user
+          });
+        });
+        
+        setProductReviews(filteredReviews);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      setLoading(false);
     }
   };
 
-  const getCategoryIcon = (category) => {
-    if (!category) return <Icon name="shoe-sneaker" size={18} color={COLORS.primary} />;
-    
-    switch (category.toLowerCase()) {
-      case 'running':
-        return <Icon name="run" size={18} color={COLORS.primary} />;
-      case 'basketball':
-        return <Icon name="basketball" size={18} color={COLORS.primary} />;
-      case 'casual':
-        return <FontAwesome5 name="shoe-prints" size={18} color={COLORS.primary} />;
-      case 'formal':
-        return <Icon name="tie" size={18} color={COLORS.primary} />;
-      case 'boots':
-        return <Icon name="boot-outline" size={18} color={COLORS.primary} />;
-      case 'sandals':
-        return <Icon name="shoe-sandal" size={18} color={COLORS.primary} />;
-      default:
-        return <Icon name="shoe-sneaker" size={18} color={COLORS.primary} />;
+  const checkIfUserCanReview = async () => {
+    try {
+      console.log('Checking if user can review product:', product._id);
+      const orders = await dispatch(getMyOrders());
+      
+      if (!orders || !Array.isArray(orders)) {
+        console.log('No orders found or invalid orders data');
+        return;
+      }
+      
+      console.log(`Found ${orders.length} orders for user`);
+      
+      // Check if user has any delivered order containing this product
+      const eligibleOrder = orders.find(order => {
+        // Check if order is delivered - NOTE: using orderStatus with capital D in Delivered
+        if (order.orderStatus !== 'Delivered') {
+          console.log(`Order ${order._id} status is ${order.orderStatus}, not eligible`);
+          return false;
+        }
+        
+        // Check if order contains this product in orderItems array
+        if (!order.orderItems || !Array.isArray(order.orderItems)) {
+          console.log(`Order ${order._id} has no orderItems array`);
+          return false;
+        }
+        
+        // Check if product exists in order items
+        const hasProduct = order.orderItems.some(item => {
+          // Convert IDs to strings for proper comparison
+          const itemProductId = item.productId?.toString();
+          const currentProductId = product._id?.toString();
+          
+          console.log(`Comparing: ${itemProductId} with ${currentProductId}`);
+          
+          return itemProductId === currentProductId;
+        });
+        
+        return hasProduct;
+      });
+      
+      if (eligibleOrder) {
+        console.log('Found eligible order for review:', eligibleOrder._id);
+        setCanReview(true);
+        setOrderIdForReview(eligibleOrder._id);
+      } else {
+        console.log('No eligible orders found for review');
+        setCanReview(false);
+      }
+    } catch (error) {
+      console.error('Error checking order history:', error);
     }
   };
 
-  const getGenderIcon = (gender) => {
-    if (!gender) return <Icon name="gender-male-female" size={18} color={COLORS.primary} />;
-    
-    switch (gender.toLowerCase()) {
-      case 'men':
-        return <FontAwesome5 name="male" size={18} color={COLORS.primary} />;
-      case 'women':
-        return <FontAwesome5 name="female" size={18} color={COLORS.primary} />;
-      case 'kids':
-        return <FontAwesome5 name="child" size={18} color={COLORS.primary} />;
-      default:
-        return <Icon name="gender-male-female" size={18} color={COLORS.primary} />;
+  const handleSubmitReview = async () => {
+    if (rating < 1 || rating > 5) {
+      Alert.alert('Invalid Rating', 'Please select a rating between 1 and 5.');
+      return;
+    }
+
+    if (!reviewText.trim()) {
+      Alert.alert('Missing Review', 'Please enter your review text.');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      
+      if (isEditMode) {
+        // Update existing review
+        const reviewData = {
+          reviewText,
+          rating
+        };
+
+        console.log('Updating review:', currentReviewId, reviewData);
+
+        const result = await dispatch(updateReview(currentReviewId, reviewData));
+        setSubmittingReview(false);
+        
+        if (result) {
+          Alert.alert('Success', 'Your review has been updated successfully.');
+          setShowReviewModal(false);
+          setReviewText('');
+          setIsEditMode(false);
+          setCurrentReviewId(null);
+          // Refresh reviews
+          fetchProductReviews();
+        } else {
+          Alert.alert('Error', 'Failed to update your review. Please try again.');
+        }
+      } else {
+        // Create new review
+        const reviewData = {
+          productId: product._id,
+          orderId: orderIdForReview,
+          reviewText,
+          rating
+        };
+
+        console.log('Submitting new review:', reviewData);
+
+        const result = await dispatch(createReview(reviewData));
+        setSubmittingReview(false);
+        
+        if (result) {
+          Alert.alert('Success', 'Your review has been submitted successfully.');
+          setShowReviewModal(false);
+          setReviewText('');
+          // Refresh reviews
+          fetchProductReviews();
+          // Update canReview state since user has already reviewed
+          setCanReview(false);
+        } else {
+          Alert.alert('Error', 'Failed to submit your review. Please try again.');
+        }
+      }
+    } catch (error) {
+      setSubmittingReview(false);
+      console.error('Error with review:', error);
+      
+      const errorMessage = error.message || 'An unexpected error occurred with your review.';
+      Alert.alert('Error', errorMessage);
     }
   };
 
-  // Handle size selection
+  const handleEditReview = (review) => {
+    setIsEditMode(true);
+    setCurrentReviewId(review._id);
+    setReviewText(review.reviewText);
+    setRating(review.rating);
+    setShowReviewModal(true);
+  };
+
+  const handleDeleteReview = (reviewId) => {
+    Alert.alert(
+      'Delete Review',
+      'Are you sure you want to delete your review? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingReview(true);
+              const result = await dispatch(deleteReview(reviewId));
+              setDeletingReview(false);
+              
+              if (result) {
+                Alert.alert('Success', 'Your review has been deleted successfully.');
+                // Refresh reviews
+                fetchProductReviews();
+                // Allow user to review again after deleting
+                await checkIfUserCanReview();
+              } else {
+                Alert.alert('Error', 'Failed to delete your review. Please try again.');
+              }
+            } catch (error) {
+              setDeletingReview(false);
+              console.error('Error deleting review:', error);
+              const errorMessage = error.message || 'An unexpected error occurred while deleting your review.';
+              Alert.alert('Error', errorMessage);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleCancelEdit = () => {
+    setShowReviewModal(false);
+    setIsEditMode(false);
+    setCurrentReviewId(null);
+    setReviewText('');
+    setRating(5);
+  };
+
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
   };
 
-  // Handle color selection
   const handleColorSelect = (color) => {
     setSelectedColor(color);
   };
 
-  // Handle image selection
   const handleImageSelect = (index) => {
     setSelectedImageIndex(index);
   };
 
   const handleSubmit = async () => {
     try {
-        // Check if the user is authorized
-        const tokenData = await getToken();
-        const authToken = tokenData?.authToken;
+      const tokenData = await getToken();
+      const authToken = tokenData?.authToken;
 
-        if (!authToken) {
-            Alert.alert('Unauthorized', 'You must be logged in to add items to the cart.');
-            return;
-        }
+      if (!authToken) {
+        Alert.alert('Unauthorized', 'You must be logged in to add items to the cart.');
+        return;
+      }
 
-        // Validate required fields
-        if (!selectedSize || !selectedColor || !product._id || !product.brand || !product.category || !product.gender) {
-            Alert.alert('Error', 'Product ID, brand, category, size, color, and gender are required.');
-            return;
-        }
+      if (!selectedSize || !selectedColor || !product._id || !product.brand || !product.category || !product.gender) {
+        Alert.alert('Error', 'Please select a size and color before adding to cart.');
+        return;
+      }
 
-        // Prepare the request payload
-        const selectedDetails = {
-            productId: product._id, // Ensure productId is included
-            quantity: 1, // Default quantity
-            brand: product.brand,
-            category: product.category,
-            size: selectedSize,
-            color: selectedColor,
-            gender: product.gender,
-            productName: product.name,
-            productPrice: product.price,
-            productImage: product.image && product.image.length > 0 ? product.image[0] : null, // Get the first image
-        };
+      const selectedDetails = {
+        productId: product._id,
+        quantity: 1,
+        brand: product.brand,
+        category: product.category,
+        size: selectedSize,
+        color: selectedColor,
+        gender: product.gender,
+        productName: product.name,
+        productPrice: product.price,
+        productImage: product.image && product.image.length > 0 ? product.image[0] : null,
+      };
 
-        // Dispatch the addToCart action and wait for the response
-        const response = await dispatch(addToCart(selectedDetails));
-        console.log('Product being added to cart:', JSON.stringify(selectedDetails));
+      const response = await dispatch(addToCart(selectedDetails));
+      console.log('Product being added to cart:', JSON.stringify(selectedDetails));
 
-        // Handle the response
-        if (response?.success) {
-            const { cartItem } = response;
-            Alert.alert(
-                'Success',
-                `${cartItem.quantity} ${cartItem.brand} ${cartItem.category} (${cartItem.size}, ${cartItem.color}) added to your cart.`
-            );
-        } else {
-            Alert.alert('Error', response?.message || 'Failed to add item to cart.');
-        }
+      if (response?.success) {
+        const { cartItem } = response;
+        Alert.alert(
+          'Success',
+          `${cartItem.quantity} ${cartItem.brand} ${cartItem.category} (${cartItem.size}, ${cartItem.color}) added to your cart.`
+        );
+      } else {
+        Alert.alert('Error', response?.message || 'Failed to add item to cart.');
+      }
     } catch (error) {
-        console.error('Error adding to cart:', error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error('Error adding to cart:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     }
   };
 
+  const isOutOfStock = parseInt(product.stock) === 0;
+
+  // Render stars for ratings
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const halfStar = rating % 1 >= 0.5;
+    
+    for (let i = 1; i <= 5; i++) {
+      if (i <= fullStars) {
+        stars.push(<AntDesign key={i} name="star" size={16} color="#FFD700" />);
+      } else if (i === fullStars + 1 && halfStar) {
+        stars.push(<AntDesign key={i} name="staro" size={16} color="#FFD700" />);
+      } else {
+        stars.push(<AntDesign key={i} name="staro" size={16} color="#CCCCCC" />);
+      }
+    }
+    
+    return stars;
+  };
+
+  // Calculate average rating
+  const calculateAverageRating = () => {
+    if (productReviews.length === 0) return 0;
+    
+    const sum = productReviews.reduce((total, review) => total + review.rating, 0);
+    return (sum / productReviews.length).toFixed(1);
+  };
+  
+  // Get user display name based on populated user object
+  const getUserDisplayName = (review) => {
+    // Check if user is populated with firstName and lastName
+    if (review.user && typeof review.user === 'object') {
+      // If we have firstName and lastName fields
+      if (review.user.firstName && review.user.lastName) {
+        return `${review.user.firstName} ${review.user.lastName}`;
+      }
+      // If we only have one of the fields
+      else if (review.user.firstName) {
+        return review.user.firstName;
+      }
+      else if (review.user.lastName) {
+        return review.user.lastName;
+      }
+    }
+    
+    // Fallback to user ID if not populated or missing name fields
+    return `User ${typeof review.user === 'string' ? review.user.substring(0, 8) : 'Anonymous'}`;
+  };
+
+  // Get user profile image if available
+  const getUserProfileImage = (review) => {
+    if (review.user && typeof review.user === 'object' && 
+        review.user.profileImage && review.user.profileImage.url) {
+      return review.user.profileImage.url;
+    }
+    return null;
+  };
+  const isCurrentUserReview = (review) => {
+    // Add more extensive debugging to identify issues
+    console.log('Review ownership check data:', { 
+      currentUserId: currentUserId,
+      reviewId: review?._id,
+      reviewUser: review?.user,
+      reviewUserType: typeof review?.user
+    });
+    
+    // Return false if we're missing essential data
+    if (!currentUserId || !review) {
+      console.log('Missing currentUserId or review object');
+      return false;
+    }
+    
+    // Handle case where review.user is undefined or null
+    if (!review.user) {
+      console.log('Review has no user property');
+      return false;
+    }
+    
+    // Convert currentUserId to string to ensure consistent comparison
+    const currentUserIdStr = String(currentUserId).trim();
+    
+    // Get the reviewer's user ID from the review object, handling different data structures
+    let reviewUserId;
+    
+    if (typeof review.user === 'object' && review.user !== null) {
+      // Try all possible ID locations in the user object
+      if (review.user._id) {
+        reviewUserId = String(review.user._id).trim();
+      } else if (review.user.id) {
+        reviewUserId = String(review.user.id).trim();
+      } else {
+        console.log('User object does not contain expected ID field');
+        return false;
+      }
+    } else if (typeof review.user === 'string') {
+      // If review.user is already a string ID
+      reviewUserId = String(review.user).trim();
+    } else {
+      console.log('Unexpected review.user type:', typeof review.user);
+      return false;
+    }
+    
+    // Perform the comparison and log the result
+    const isOwner = reviewUserId === currentUserIdStr;
+    console.log(`Comparison: "${reviewUserId}" vs "${currentUserIdStr}" = ${isOwner}`);
+    
+    return isOwner;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryDark} />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <MaterialIcons name="arrow-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
-        <TouchableOpacity style={styles.cartButton}>
+        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.navigate('Cart')}>
           <Icon name="cart-outline" size={24} color={COLORS.white} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Image Section */}
-        <View style={styles.imageSection}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+        {/* Image Carousel */}
+        <View style={styles.imageCarousel}>
           {/* Main Image */}
-          <View style={styles.imageContainer}>
+          <View style={styles.mainImageContainer}>
             {product.image && product.image.length > 0 ? (
               <Image
                 source={{
@@ -175,12 +547,12 @@ const DisplaySingleProduct = ({ route, navigation }) => {
             )}
           </View>
           
-          {/* Image Selector - Only show if there are multiple images */}
+          {/* Image Thumbnails */}
           {product.image && product.image.length > 1 && (
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.thumbnailContainer}
+              contentContainerStyle={styles.thumbnailScroll}
             >
               {product.image.map((img, index) => (
                 <TouchableOpacity
@@ -193,9 +565,7 @@ const DisplaySingleProduct = ({ route, navigation }) => {
                 >
                   <Image
                     source={{
-                      uri: typeof img === 'string'
-                        ? img
-                        : (img && img.uri ? img.uri : null),
+                      uri: typeof img === 'string' ? img : (img && img.uri ? img.uri : null),
                     }}
                     style={styles.thumbnailImage}
                     resizeMode="cover"
@@ -206,109 +576,223 @@ const DisplaySingleProduct = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Product Information */}
-        <View style={styles.productInfoContainer}>
-          <Text style={styles.productName}>{product.name}</Text>
+        {/* Product Information Card */}
+        <View style={styles.productCard}>
+          {/* Basic Info Section */}
+          <View style={styles.basicInfo}>
+            <Text style={styles.productName}>{product.name}</Text>
+            <Text style={styles.priceText}>
+              ₱{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}
+            </Text>
+            
+            <View style={styles.ratingContainer}>
+              <Text style={styles.ratingText}>{calculateAverageRating()}</Text>
+              <View style={styles.starsContainer}>
+                {renderStars(calculateAverageRating())}
+              </View>
+              <Text style={styles.reviewCountText}>
+                ({productReviews.length} {productReviews.length === 1 ? 'Review' : 'Reviews'})
+              </Text>
+            </View>
+            
+            {isOutOfStock ? (
+              <View style={styles.stockStatus}>
+                <Icon name="alert-circle" size={16} color={COLORS.error} />
+                <Text style={styles.outOfStockText}>Out of Stock</Text>
+              </View>
+            ) : (
+              <View style={styles.stockStatus}>
+                <Icon name="check-circle" size={16} color={COLORS.success} />
+                <Text style={styles.inStockText}>In Stock</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Product Metadata */}
+          <View style={styles.metadataContainer}>
+            <View style={styles.metadataRow}>
+              <View style={styles.metadataItem}>
+                {getBrandIcon(product.brand)}
+                <View style={styles.metadataTextContainer}>
+                  <Text style={styles.metadataLabel}>Brand</Text>
+                  <Text style={styles.metadataValue}>{product.brand || 'Unknown'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.metadataItem}>
+                {getCategoryIcon(product.category)}
+                <View style={styles.metadataTextContainer}>
+                  <Text style={styles.metadataLabel}>Category</Text>
+                  <Text style={styles.metadataValue}>{product.category || 'Unknown'}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.metadataRow}>
+              <View style={styles.metadataItem}>
+                {getGenderIcon(product.gender)}
+                <View style={styles.metadataTextContainer}>
+                  <Text style={styles.metadataLabel}>Gender</Text>
+                  <Text style={styles.metadataValue}>{product.gender || 'Unisex'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.metadataItem}>
+                <Icon name="cube-outline" size={22} color={COLORS.primary} />
+                <View style={styles.metadataTextContainer}>
+                  <Text style={styles.metadataLabel}>Material</Text>
+                  <Text style={styles.metadataValue}>{product.material || 'Unknown'}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
           
-          {/* Price information */}
-          <Text style={styles.priceText}>
-            ₱{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}
-          </Text>
-                
-          {/* Brand Icon */}
-          <View style={styles.metadataItem}>
-            {getBrandIcon(product.brand)}
-            <Text style={styles.metadataText}>
-              <Text style={styles.metadataLabel}>Brand: </Text>
-              {product.brand || 'Unknown'}
-            </Text>
+          <View style={styles.divider} />
+
+          {/* Sizes Section */}
+          <View style={styles.optionsSection}>
+            <Text style={styles.sectionTitle}>Size</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.optionsScrollContent}
+            >
+              {Array.isArray(product.size) && product.size.map((size, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.sizeChip,
+                    selectedSize === size && styles.selectedChip,
+                  ]}
+                  onPress={() => handleSizeSelect(size)}
+                >
+                  <Text style={[
+                    styles.sizeText,
+                    selectedSize === size && styles.selectedChipText,
+                  ]}>
+                    {size}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
 
-          {/* Category Icon */}
-          <View style={styles.metadataItem}>
-            {getCategoryIcon(product.category)}
-            <Text style={styles.metadataText}>
-              <Text style={styles.metadataLabel}>Category: </Text>
-              {product.category || 'Unknown'}
-            </Text>
+          {/* Colors Section */}
+          <View style={styles.optionsSection}>
+            <Text style={styles.sectionTitle}>Color</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.optionsScrollContent}
+            >
+              {Array.isArray(product.color) && product.color.map((color, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.colorChip,
+                    selectedColor === color && styles.selectedChip,
+                  ]}
+                  onPress={() => handleColorSelect(color)}
+                >
+                  <Text style={[
+                    styles.colorText,
+                    selectedColor === color && styles.selectedChipText,
+                  ]}>
+                    {color}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
 
-          {/* Gender Icon */}
-          <View style={styles.metadataItem}>
-            {getGenderIcon(product.gender)}
-            <Text style={styles.metadataText}>
-              <Text style={styles.metadataLabel}>Gender: </Text>
-              {product.gender || 'Unisex'}
-            </Text>
-          </View>
+          <View style={styles.divider} />
 
-          {/* Material Icon */}
-          <View style={styles.metadataItem}>
-            <Icon name="cube-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.metadataText}>
-              <Text style={styles.metadataLabel}>Material: </Text>
-              {product.material ? product.material : 'Unknown'}
-            </Text>
-          </View>
-
-          {/* Available Sizes */}
-          <View style={styles.sizesContainer}>
-            <Text style={styles.sectionTitle}>Available Sizes</Text>
-            <View style={styles.sizesGrid}>
-              {Array.isArray(product.size) &&
-                product.size.map((size, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.sizeChip,
-                      selectedSize === size && { backgroundColor: COLORS.primary },
-                    ]}
-                    onPress={() => handleSizeSelect(size)}
-                  >
-                    <Text
-                      style={[
-                        styles.sizeText,
-                        selectedSize === size && { color: COLORS.white },
-                      ]}
-                    >
-                      {size}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-            </View>
-          </View>
-
-          {/* Available Colors */}
-          <View style={styles.colorsContainer}>
-            <Text style={styles.sectionTitle}>Available Colors</Text>
-            <View style={styles.colorsGrid}>
-              {Array.isArray(product.color) &&
-                product.color.map((color, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.colorChip,
-                      selectedColor === color && { backgroundColor: COLORS.primary },
-                    ]}
-                    onPress={() => handleColorSelect(color)}
-                  >
-                    <Text
-                      style={[
-                        styles.colorText,
-                        selectedColor === color && { color: COLORS.white },
-                      ]}
-                    >
-                      {color}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-            </View>
-          </View>
-
-          {/* Product Description */}
-          <View style={styles.descriptionContainer}>
+          {/* Description Section */}
+          <View style={styles.descriptionSection}>
             <Text style={styles.sectionTitle}>Description</Text>
             <Text style={styles.descriptionText}>{product.description}</Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Reviews Section */}
+          <View style={styles.reviewsSection}>
+            <View style={styles.reviewsHeader}>
+              <Text style={styles.sectionTitle}>Reviews</Text>
+              {canReview && (
+                <TouchableOpacity 
+                  style={styles.writeReviewButton}
+                  onPress={() => {
+                    setIsEditMode(false);
+                    setReviewText('');
+                    setRating(5);
+                    setShowReviewModal(true);
+                  }}
+                >
+                  <Text style={styles.writeReviewButtonText}>Write a Review</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {loading ? (
+              <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+              </View>
+            ) : productReviews.length === 0 ? (
+              <Text style={styles.noReviewsText}>No reviews yet. Be the first to review this product!</Text>
+            ) : (
+              productReviews.map((review) => (
+                <View key={review._id} style={styles.reviewItem}>
+                  <View style={styles.reviewHeader}>
+                    <View style={styles.reviewUser}>
+                      {getUserProfileImage(review) ? (
+                        <Image 
+                          source={{ uri: getUserProfileImage(review) }} 
+                          style={styles.reviewUserImage} 
+                        />
+                      ) : (
+                        <Icon name="account-circle" size={24} color={COLORS.primary} />
+                      )}
+                      <Text style={styles.reviewUserName}>
+                        {getUserDisplayName(review)}
+                      </Text>
+                      {isCurrentUserReview(review) && (
+                        <View style={styles.userBadge}>
+                          <Text style={styles.userBadgeText}>You</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.reviewActions}>
+                      {isCurrentUserReview(review) && (
+                        <>
+                          <TouchableOpacity 
+                            style={styles.actionButton}
+                            onPress={() => handleEditReview(review)}
+                          >
+                            <Feather name="edit-2" size={16} color={COLORS.primary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.actionButton}
+                            onPress={() => handleDeleteReview(review._id)}
+                          >
+                            <Feather name="trash-2" size={16} color={COLORS.error} />
+                          </TouchableOpacity>
+                        </>
+                      )}
+                      <Text style={styles.reviewDate}>
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.reviewRating}>
+                    {renderStars(review.rating)}
+                  </View>
+                  <Text style={styles.reviewText}>{review.reviewText}</Text>
+                </View>
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -319,36 +803,116 @@ const DisplaySingleProduct = ({ route, navigation }) => {
           <Icon name="heart-outline" size={24} color={COLORS.primary} />
         </TouchableOpacity>
 
-        {/* Add to Cart Button */}
-        <TouchableOpacity
-          style={[
-            styles.addToCartButton,
-            parseInt(product.stock) === 0 && styles.disabledButton,
-          ]}
-          disabled={parseInt(product.stock) === 0}
-          onPress={handleSubmit}
-        >
-          <Icon name="cart-plus" size={24} color={COLORS.white} />
-          <Text style={styles.buttonText}>
-            {parseInt(product.stock) === 0 ? 'OUT OF STOCK' : 'Add to Cart'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtonsContainer}>
+          {/* Add to Cart Button */}
+          <TouchableOpacity
+            style={[
+              styles.addToCartButton,
+              isOutOfStock && styles.disabledButton,
+            ]}
+            disabled={isOutOfStock}
+            onPress={handleSubmit}
+          >
+            <Icon name="cart-plus" size={20} color={COLORS.white} />
+            <Text style={styles.actionButtonText}>
+              {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+            </Text>
+          </TouchableOpacity>
 
-        {/* Buy Now Button */}
-        <TouchableOpacity
-          style={[
-            styles.buyNowButton,
-            parseInt(product.stock) === 0 && styles.disabledButton,
-          ]}
-          disabled={parseInt(product.stock) === 0}
-          onPress={handleSubmit}
-        >
-          <Icon name="flash" size={24} color={COLORS.primary} />
-          <Text style={styles.buyNowText}>
-            {parseInt(product.stock) === 0 ? 'OUT OF STOCK' : 'Buy Now'}
-          </Text>
-        </TouchableOpacity>
+          {/* Buy Now Button */}
+          <TouchableOpacity
+            style={[
+              styles.buyNowButton,
+              isOutOfStock && styles.disabledButton,
+            ]}
+            disabled={isOutOfStock}
+            onPress={() => {
+              handleSubmit();
+              if (!isOutOfStock) {
+                navigation.navigate('Checkout');
+              }
+            }}
+          >
+            <Icon name="flash" size={20} color={COLORS.white} />
+            <Text style={styles.actionButtonText}>
+              {isOutOfStock ? 'Out of Stock' : 'Buy Now'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Review Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showReviewModal}
+        onRequestClose={handleCancelEdit}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {isEditMode ? 'Edit Your Review' : 'Write a Review'}
+              </Text>
+              <TouchableOpacity onPress={handleCancelEdit}>
+                <MaterialIcons name="close" size={24} color={COLORS.darkText} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.ratingLabel}>Your Rating</Text>
+            <View style={styles.ratingSelector}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRating(star)}
+                  style={styles.starButton}
+                >
+                  <AntDesign
+                    name={rating >= star ? "star" : "staro"} 
+                    size={32} 
+                    color={rating >= star ? "#FFD700" : "#CCCCCC"} 
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.reviewLabel}>Your Review</Text>
+            <TextInput
+              style={styles.reviewInput}
+              multiline
+              placeholder="Share your experience with this product..."
+              value={reviewText}
+              onChangeText={setReviewText}
+              maxLength={500}
+            />
+            <Text style={styles.charCount}>{reviewText.length}/500</Text>
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmitReview}
+              disabled={submittingReview}
+            >
+              {submittingReview ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {isEditMode ? 'Update Review' : 'Submit Review'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Global overlay loading indicator for delete operation */}
+      {deletingReview && (
+        <View style={styles.overlayLoading}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Deleting review...</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };

@@ -19,7 +19,6 @@ import { styles } from '../Styles/home.js';
 import { debounce } from 'lodash';
 import { Banner } from '../Components/Banner';
 import { SearchBar } from '../Components/SearchBar';
-import { ShoeCategories } from '../Components/ShoeCategories';
 import { ProductCard } from '../Components/ProductCard'; // Import the ProductCard component
 
 const Home = ({ navigation }) => {
@@ -98,11 +97,10 @@ const Home = ({ navigation }) => {
   };
   
   const renderProductCard = ({ item }) => {
-    // Log product image details - Note the change from images to image based on API response
     console.log('Product Image Data:', {
       productId: item._id,
       productName: item.name,
-      imageUrl: item.image && item.image[0], // Direct access to first image URL in array
+      imageUrl: item.image && item.image[0], 
       imageName: item.image && item.image[0]?.split('/').pop(), // Extract filename
       imageCount: item.image ? item.image.length : 0,
       sizes: item.size || 'No size information' // Using size instead of sizes based on API
@@ -182,13 +180,6 @@ const Home = ({ navigation }) => {
                         onExplorePress={handleExplorePress}
                         colors={[COLORS.primary, '#142030', '#0c1622']}
                       />
-                      
-                      {/* <ShoeCategories 
-                        onCategorySelect={handleCategorySelect}
-                        selectedCategory={selectedCategory}
-                      /> */}
-                      
-                      {/* Products heading */}
                       <View style={styles.listHeader}>
                         <View style={styles.headerTextContainer}>
                           <Text style={styles.sectionTitle}>Featured Products</Text>
