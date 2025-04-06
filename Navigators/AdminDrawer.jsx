@@ -15,6 +15,7 @@ import User from '../Screens/Admin/Components/User';
 import Settings from '../Screens/Admin/Components/Settings';
 import DrawerContent from '../Navigators/Components/DrawerContent';
 import Order from '../Screens/Admin/Components/Orders';
+import Promotions from '../Screens/Admin/Components/Promotions';
 
 const { width } = Dimensions.get('window');
 const Drawer = createDrawerNavigator();
@@ -101,6 +102,16 @@ const AdminNavigator = () => {
             <Ionicons name="cart-outline" color={color} size={size} />
           ),
           drawerLabel: "Orders"
+        }}
+      />
+      <Drawer.Screen
+        name="Promotions"
+        component={Promotions}
+        options={{
+          drawerIcon: ({color, size}) => (
+            <Ionicons name="pricetag-outline" color={color} size={size} />
+          ),
+          drawerLabel: "Promotions"
         }}
       />
     </Drawer.Navigator>
