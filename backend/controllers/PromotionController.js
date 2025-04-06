@@ -154,72 +154,120 @@ exports.deletePromotion = async (req, res) => {
   }
 };
 
-// Send notifications for selected promotions
-exports.sendSelectedPromotionNotifications = async (req, res) => {
-  try {
-    const { promotionIds } = req.body;
-
-    // Fetch the selected promotions
-    const promotions = await Promotion.find({ _id: { $in: promotionIds } }).populate('product', 'name');
-    if (promotions.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'No promotions found for the given IDs',
-      });
-    }
-
-    // Fetch all users with FCM tokens
-    const users = await User.find({ fcmToken: { $exists: true, $ne: null } });
-    if (users.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'No users with FCM tokens found',
-      });
-    }
-
-    // Prepare and send notifications for each promotion
-    const tokens = users.map((user) => user.fcmToken);
-    const responses = [];
-
-    for (const promotion of promotions) {
-      const notificationPayload = {
+const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
+    try {
+      const message = {
+        token: fcmToken,
         notification: {
-          title: promotion.title,
-          body: `${promotion.product.name} is now ${promotion.discountPercentage}% off!`,
+          title,
+          body,
         },
-        data: {
+        data: typeof data === 'object'
+          ? Object.fromEntries(Object.entries(data).map(([key, value]) => [key, String(value)]))
+          : {},
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'shoeshable-promotions', // Ensure this matches the channel in your app
+            priority: 'high',
+            visibility: 'public',
+            sound: 'default',
+            defaultSound: true,
+            color: '#1976D2',
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+              contentAvailable: true,
+            },
+          },
+          headers: {
+            'apns-priority': '10',
+          },
+        },
+      };
+  
+      const response = await admin.messaging().send(message);
+      console.log(`Successfully sent notification: ${response}`);
+      return response;
+    } catch (error) {
+      console.error('Error sending FCM notification:', error);
+      throw error;
+    }
+  };
+  
+  exports.sendSelectedPromotionNotifications = async (req, res) => {
+    try {
+      const { promotionIds } = req.body;
+  
+      // Fetch the selected promotions
+      const promotions = await Promotion.find({ _id: { $in: promotionIds } }).populate('product', 'name');
+      if (promotions.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No promotions found for the given IDs',
+        });
+      }
+  
+      // Fetch all users with FCM tokens
+      const users = await User.find({ fcmToken: { $exists: true, $ne: null } });
+      if (users.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No users with FCM tokens found',
+        });
+      }
+  
+      const responses = [];
+  
+      for (const promotion of promotions) {
+        const title = promotion.title;
+        const body = `${promotion.product.name} is now ${promotion.discountPercentage}% off!`;
+        const data = {
           promotionId: promotion._id.toString(),
           productId: promotion.product._id.toString(),
           screen: 'PromotionDetails', // Navigate to a specific screen in the app
-        },
-      };
-
-      const response = await admin.messaging().sendMulticast({
-        tokens,
-        ...notificationPayload,
+        };
+  
+        for (const user of users) {
+          if (user.fcmToken) {
+            try {
+              const response = await sendFCMNotification(user.fcmToken, title, body, data);
+              responses.push({
+                userId: user._id,
+                promotionId: promotion._id,
+                success: true,
+                response,
+              });
+            } catch (error) {
+              responses.push({
+                userId: user._id,
+                promotionId: promotion._id,
+                success: false,
+                error: error.message,
+              });
+            }
+          }
+        }
+      }
+  
+      res.status(200).json({
+        success: true,
+        message: 'Notifications sent for selected promotions',
+        results: responses,
       });
-
-      responses.push({
-        promotionId: promotion._id,
-        successCount: response.successCount,
-        failureCount: response.failureCount,
+    } catch (error) {
+      console.error('Error sending promotion notifications:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send promotion notifications',
+        error: error.message,
       });
     }
-
-    res.status(200).json({
-      success: true,
-      message: 'Notifications sent for selected promotions',
-      results: responses,
-    });
-  } catch (error) {
-    console.error('Error sending promotion notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send promotion notifications',
-      error: error.message,
-    });
-  }
-};
+  };
 
 // Get a specific promotion by ID or title
 exports.getPromotionByIdOrTitle = async (req, res) => {

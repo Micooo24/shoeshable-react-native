@@ -10,7 +10,7 @@ import Trends from "../Screens/Features/Trends";
 import Checkout from "../Screens/Features/Checkout";
 import AdminNavigator from "./AdminDrawer"; 
 import OrderDetails from '../Screens/Features/OrderDetails'
-import Notifcation from '../Screens/Features/Notification';
+import Notification from '../Screens/Features/Notification';
 
 const Stack = createNativeStackNavigator();
 
@@ -49,7 +49,7 @@ const MainNavigator = () => {
       options={{ headerShown: false }} />
       <Stack.Screen name="OrderDetails" component={OrderDetails}
       options={{ headerShown: false }} />
-      <Stack.Screen name="Notification" component={Notifcation}
+      <Stack.Screen name="Notification" component={Notification}
       options={{ headerShown: false }} />
     </Stack.Navigator>
   );
