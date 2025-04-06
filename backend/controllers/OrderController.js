@@ -138,11 +138,14 @@ const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
         android: {
           priority: 'high',
           notification: {
-            channelId: 'high-priority',
+            // Change this to match the channel created in App.js
+            channelId: 'shoeshable-orders', // UPDATED
             priority: 'high',
             visibility: 'public',
             sound: 'default',
             defaultSound: true,
+            // Add color for notification icon
+            color: '#1976D2'
           }
         },
         apns: {
