@@ -10,7 +10,8 @@ import {
   Alert,
   Modal,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  StyleSheet
 } from "react-native";
 import { useSelector, useDispatch } from 'react-redux';
 import BottomNavigator from "../../Navigators/BottomNavigator";
@@ -26,18 +27,27 @@ import { fetchUserOrders, clearOrders } from '../../Redux/actions/userActions';
 const Profile = ({ navigation }) => {
   const dispatch = useDispatch();
   
-  // Get Redux state with proper defaults to prevent errors
-  const orderData = useSelector(state => state.orderData || {});
-  const orderCounts = orderData.orderCounts || {
-    toPay: 0,
-    toShip: 0,
-    toDeliver: 0,
-    toRate: 0
-  };
-  const ordersLoading = orderData.loading || false;
+  // Get order data from Redux store using a reliable selector
+  const { orders = [], orderCounts = {}, loading: ordersLoading } = useSelector(state => {
+    // Try orderData first, then fallback to other possible paths
+    const orderState = state.orderData || 
+                      (state.userReducer && state.userReducer.orderData) || 
+                      {};
+    
+    return {
+      orders: orderState.orders || [],
+      orderCounts: orderState.orderCounts || {
+        toPay: 0,
+        toShip: 0,
+        toDeliver: 0,
+        toRate: 0
+      },
+      loading: orderState.loading || false
+    };
+  });
   
-  // Debug logging for order counts
-  console.log("Order counts from Redux:", orderCounts);
+  // Log order counts for debugging
+  console.log("Order counts from Redux:", JSON.stringify(orderCounts));
   
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState({ username: '', avatar: 'https://via.placeholder.com/150' });
@@ -259,7 +269,7 @@ const Profile = ({ navigation }) => {
     navigation.navigate('Orders', { status });
   };
 
-  // Function to render badges with counts
+  // Updated function to render badges only for non-zero counts
   const renderCountBadge = (countKey) => {
     const count = orderCounts[countKey] || 0;
     
@@ -272,6 +282,16 @@ const Profile = ({ navigation }) => {
     }
     
     return null;
+  };
+
+  // Function to manually refresh orders
+  const refreshOrders = () => {
+    if (isLoggedIn) {
+      dispatch(fetchUserOrders());
+      Alert.alert('Refreshing', 'Fetching latest order data...');
+    } else {
+      Alert.alert('Not Logged In', 'Please log in to view your orders');
+    }
   };
 
   return (
@@ -399,8 +419,11 @@ const Profile = ({ navigation }) => {
                 <Icon name="shopping" size={20} color={COLORS.primary} />
                 <Text style={styles.sectionTitle}>My Purchases</Text>
               </View>
-              <TouchableOpacity>
-                <Text style={styles.viewAllText}>View All</Text>
+              <TouchableOpacity onPress={refreshOrders}>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <Icon name="refresh" size={16} color={COLORS.primary} style={{marginRight: 4}} />
+                  <Text style={styles.viewAllText}>Refresh</Text>
+                </View>
               </TouchableOpacity>
             </View>
             
@@ -414,7 +437,6 @@ const Profile = ({ navigation }) => {
                 >
                   <View style={styles.statusIconContainer}>
                     <Icon name={status.icon} size={24} color={COLORS.accent} />
-                    {/* Use the custom rendering function for the badge */}
                     {renderCountBadge(status.countKey)}
                   </View>
                   <Text style={styles.statusText}>{status.title}</Text>
@@ -422,6 +444,51 @@ const Profile = ({ navigation }) => {
               ))}
             </View>
           </View>
+
+          {/* Order Summary Section - Replaces the debug section */}
+          {isLoggedIn && (
+            <View style={styles.purchasesContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleWrapper}>
+                  <Icon name="information-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.sectionTitle}>Order Summary</Text>
+                </View>
+                <TouchableOpacity onPress={refreshOrders}>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <Icon name="refresh" size={16} color={COLORS.primary} style={{marginRight: 4}} />
+                    <Text style={styles.viewAllText}>Refresh</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={{padding: 12, backgroundColor: '#f5f5f5', borderRadius: 8}}>
+                {ordersLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} style={{marginVertical: 10}} />
+                ) : (
+                  <>
+                    <Text style={{fontWeight: 'bold', marginBottom: 8}}>Your Order Status:</Text>
+                    <Text>Awaiting Payment: {orderCounts.toPay}</Text>
+                    <Text>Ready to Ship: {orderCounts.toShip}</Text>
+                    <Text>In Transit: {orderCounts.toDeliver}</Text>
+                    <Text>Delivered (Need Review): {orderCounts.toRate}</Text>
+                    
+                    <TouchableOpacity 
+                      style={{
+                        backgroundColor: COLORS.primary,
+                        padding: 10,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        marginTop: 12
+                      }}
+                      onPress={() => navigation.navigate('Orders')}
+                    >
+                      <Text style={{color: 'white', fontWeight: 'bold'}}>View All Orders</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Recent Orders Section */}
           <View style={styles.purchasesContainer}>
@@ -438,32 +505,41 @@ const Profile = ({ navigation }) => {
             <View style={styles.ordersList}>
               {ordersLoading ? (
                 <ActivityIndicator size="small" color={COLORS.primary} style={{marginVertical: 20}} />
-              ) : (
+              ) : orders.length > 0 ? (
                 <>
-                  <TouchableOpacity style={styles.orderItem}>
-                    <View style={[styles.orderIconBg, {backgroundColor: `${COLORS.success}20`}]}>
-                      <Icon name="package-variant" size={18} color={COLORS.success} />
-                    </View>
-                    <View style={styles.orderDetails}>
-                      <Text style={styles.orderTitle}>Order #2458</Text>
-                      <Text style={styles.orderSubtitle}>Delivered • April 1, 2025</Text>
-                    </View>
-                    <Text style={styles.orderPrice}>$124.99</Text>
-                  </TouchableOpacity>
-                  
-                  <View style={styles.divider} />
-                  
-                  <TouchableOpacity style={styles.orderItem}>
-                    <View style={[styles.orderIconBg, {backgroundColor: `${COLORS.warning}20`}]}>
-                      <Icon name="truck-delivery-outline" size={18} color={COLORS.warning} />
-                    </View>
-                    <View style={styles.orderDetails}>
-                      <Text style={styles.orderTitle}>Order #2457</Text>
-                      <Text style={styles.orderSubtitle}>Shipping • March 30, 2025</Text>
-                    </View>
-                    <Text style={styles.orderPrice}>$89.50</Text>
-                  </TouchableOpacity>
+                  {/* Display the two most recent orders */}
+                  {orders.slice(0, 2).map((order, index) => (
+                    <React.Fragment key={order._id}>
+                      <TouchableOpacity 
+                        style={styles.orderItem}
+                        onPress={() => navigation.navigate('OrderDetails', { orderId: order._id })}
+                      >
+                        <View style={[styles.orderIconBg, {
+                          backgroundColor: getOrderStatusColor(order.orderStatus)
+                        }]}>
+                          <Icon 
+                            name={getOrderStatusIcon(order.orderStatus)} 
+                            size={18} 
+                            color={getOrderStatusTextColor(order.orderStatus)} 
+                          />
+                        </View>
+                        <View style={styles.orderDetails}>
+                          <Text style={styles.orderTitle}>Order #{order._id.slice(-5)}</Text>
+                          <Text style={styles.orderSubtitle}>
+                            {order.orderStatus} • {formatDate(order.createdAt)}
+                          </Text>
+                        </View>
+                        <Text style={styles.orderPrice}>${(order.totalPrice / 100).toFixed(2)}</Text>
+                      </TouchableOpacity>
+                      
+                      {index < orders.slice(0, 2).length - 1 && (
+                        <View style={styles.divider} />
+                      )}
+                    </React.Fragment>
+                  ))}
                 </>
+              ) : (
+                <Text style={styles.emptyStateText}>You don't have any recent orders</Text>
               )}
             </View>
           </View>
@@ -609,6 +685,46 @@ const Profile = ({ navigation }) => {
       </View>
     </SafeAreaView>
   );
+};
+
+// Helper functions for order display
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const options = { month: 'short', day: 'numeric', year: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+};
+
+const getOrderStatusColor = (status) => {
+  const statusLower = (status || '').toLowerCase();
+  
+  if (statusLower === 'delivered') return `${COLORS.success}20`;
+  if (statusLower === 'shipped') return `${COLORS.warning}20`;
+  if (statusLower === 'confirmed') return `${COLORS.info}20`;
+  if (statusLower === 'processing' || statusLower === 'pending') return `${COLORS.primary}20`;
+  
+  return `${COLORS.accent}20`; // Default color
+};
+
+const getOrderStatusTextColor = (status) => {
+  const statusLower = (status || '').toLowerCase();
+  
+  if (statusLower === 'delivered') return COLORS.success;
+  if (statusLower === 'shipped') return COLORS.warning;
+  if (statusLower === 'confirmed') return COLORS.info;
+  if (statusLower === 'processing' || statusLower === 'pending') return COLORS.primary;
+  
+  return COLORS.accent; // Default color
+};
+
+const getOrderStatusIcon = (status) => {
+  const statusLower = (status || '').toLowerCase();
+  
+  if (statusLower === 'delivered') return 'package-variant-delivered';
+  if (statusLower === 'shipped') return 'truck-delivery-outline';
+  if (statusLower === 'confirmed') return 'package-variant-closed';
+  if (statusLower === 'processing' || statusLower === 'pending') return 'credit-card-outline';
+  
+  return 'shopping'; // Default icon
 };
 
 export default Profile;

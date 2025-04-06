@@ -103,10 +103,9 @@ const Home = ({ navigation }) => {
       imageUrl: item.image && item.image[0], 
       imageName: item.image && item.image[0]?.split('/').pop(), // Extract filename
       imageCount: item.image ? item.image.length : 0,
-      sizes: item.size || 'No size information' // Using size instead of sizes based on API
+      sizes: item.size || 'No size information'
     });
     
-    // Create adapted item with structure expected by ProductCard if needed
     const adaptedItem = {
       ...item,
       // If your ProductCard expects images[].url format, convert here

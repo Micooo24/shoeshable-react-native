@@ -524,9 +524,7 @@ const getCurrentUserId = async () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-        {/* Image Carousel */}
         <View style={styles.imageCarousel}>
-          {/* Main Image */}
           <View style={styles.mainImageContainer}>
             {product.image && product.image.length > 0 ? (
               <Image
