@@ -723,8 +723,7 @@ const getOrderStatusIcon = (status) => {
   if (statusLower === 'shipped') return 'truck-delivery-outline';
   if (statusLower === 'confirmed') return 'package-variant-closed';
   if (statusLower === 'processing' || statusLower === 'pending') return 'credit-card-outline';
-  
-  return 'shopping'; // Default icon
+  return 'shopping'; 
 };
 
 export default Profile;

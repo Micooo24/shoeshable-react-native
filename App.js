@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import '@react-native-firebase/app';
 import messaging from '@react-native-firebase/messaging';
 import { 
@@ -10,12 +10,16 @@ import {
   TouchableOpacity, 
   Animated 
 } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { createNavigationContainerRef } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import MainNavigator from './Navigators/MainNavigator';
 import store from './Redux/store';
 import { initializeTables, dropCartTable } from './sqlite_db/DatabaseInit';
 import { Provider } from 'react-redux';
+import { getToken } from './sqlite_db/Auth'; 
+// Create navigation ref for using navigation outside of screen components
+const navigationRef = createNavigationContainerRef();
 
 // Custom in-app notification banner component
 const NotificationBanner = ({ title, body, onPress, onClose }) => {
@@ -64,14 +68,27 @@ const NotificationBanner = ({ title, body, onPress, onClose }) => {
 
 export default function App() {
   const [notification, setNotification] = useState(null);
+  const [userAuth, setUserAuth] = useState(null);
   
- 
+  // Get user auth when app starts
+  useEffect(() => {
+    const getUserAuth = async () => {
+      try {
+        const auth = await getToken();
+        setUserAuth(auth);
+        console.log("User authentication loaded");
+      } catch (err) {
+        console.error("Auth loading error:", err);
+      }
+    };
+    
+    getUserAuth();
+  }, []);
 
-  // Initialize database tables and optionally clear cart table
+  // Initialize database tables
   useEffect(() => {
     const setupDatabase = async () => {
       try {
-        // Initialize tables
         await initializeTables();
         console.log("Database initialized");
       } catch (err) {
@@ -122,14 +139,10 @@ export default function App() {
             body: remoteMessage.notification.body || '',
             data: remoteMessage.data || {}
           });
-          
-          // For Android, this will now display a heads-up notification as well
-          // because we've configured the channel properly with firebase.json
         }
       });
     };
 
-    // Rest of your existing messaging setup
     messaging().setBackgroundMessageHandler(async remoteMessage => {
       console.log('🌙 BACKGROUND NOTIFICATION RECEIVED:');
       console.log(JSON.stringify(remoteMessage, null, 2));
@@ -140,6 +153,19 @@ export default function App() {
       if (remoteMessage) {
         console.log('🚀 APP OPENED BY NOTIFICATION:');
         console.log(JSON.stringify(remoteMessage, null, 2));
+        
+        // App was opened from a quit state by notification
+        // Handle navigation after app is ready
+        if (remoteMessage.data && remoteMessage.data.orderId) {
+          // We need to wait for navigation to be ready
+          setTimeout(() => {
+            if (navigationRef.isReady()) {
+              navigationRef.navigate('OrderDetails', { 
+                orderId: remoteMessage.data.orderId 
+              });
+            }
+          }, 1000); // Small delay to ensure navigation is ready
+        }
       } else {
         console.log('📱 App opened normally (not from notification)');
       }
@@ -148,10 +174,14 @@ export default function App() {
     messaging().onNotificationOpenedApp(remoteMessage => {
       console.log('⏰ APP BROUGHT FROM BACKGROUND BY NOTIFICATION:');
       console.log(JSON.stringify(remoteMessage, null, 2));
-      // Handle navigation based on notification data
-      if (remoteMessage.data && remoteMessage.data.screen) {
-        console.log('📱 Navigation target:', remoteMessage.data.screen);
-        // You can store this to navigate after app is ready
+      
+      // Handle navigation for app opened from background
+      if (remoteMessage.data && remoteMessage.data.orderId) {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('OrderDetails', { 
+            orderId: remoteMessage.data.orderId 
+          });
+        }
       }
     });
 
@@ -164,21 +194,30 @@ export default function App() {
 
   // Handle notification banner press
   const handleNotificationPress = () => {
-    if (notification && notification.data && notification.data.screen) {
-      // You can add navigation logic here
-      console.log('Navigating to:', notification.data.screen);
-      // Example: 
-      // navigation.navigate(notification.data.screen, { 
-      //   orderId: notification.data.orderId 
-      // });
+    if (notification && notification.data) {
+      // Handle navigation to OrderDetails if orderId is available
+      if (notification.data.orderId) {
+        console.log('Navigating to OrderDetails with orderId:', notification.data.orderId);
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('OrderDetails', { 
+            orderId: notification.data.orderId
+          });
+        }
+      } else if (notification.data.screen) {
+        // Generic navigation handling for other screens
+        console.log('Navigating to:', notification.data.screen);
+        if (navigationRef.isReady()) {
+          navigationRef.navigate(notification.data.screen, notification.data);
+        }
+      }
     }
     setNotification(null);
   };
 
   return (
     <Provider store={store}>
-      <NavigationContainer>
-        <MainNavigator />
+      <NavigationContainer ref={navigationRef}>
+        <MainNavigator userAuth={userAuth} />
         <StatusBar style="auto" />
         
         {/* Custom in-app notification banner */}
@@ -196,6 +235,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  // Styles remain unchanged
   banner: {
     position: 'absolute',
     top: 0,

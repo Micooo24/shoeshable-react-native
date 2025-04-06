@@ -8,7 +8,8 @@ import Cart from "../Screens/Features/Cart";
 import Category from "../Screens/Features/Category";
 import Trends from "../Screens/Features/Trends";
 import Checkout from "../Screens/Features/Checkout";
-import AdminNavigator from "./AdminDrawer"; // Import AdminDrawer if needed
+import AdminNavigator from "./AdminDrawer"; 
+import OrderDetails from '../Screens/Features/OrderDetails'
 
 const Stack = createNativeStackNavigator();
 
@@ -44,6 +45,8 @@ const MainNavigator = () => {
       <Stack.Screen name="Cart" component={Cart}
       options={{ headerShown: false }} />
       <Stack.Screen name="Checkout" component={Checkout}
+      options={{ headerShown: false }} />
+      <Stack.Screen name="OrderDetails" component={OrderDetails}
       options={{ headerShown: false }} />
     </Stack.Navigator>
   );
