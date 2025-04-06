@@ -356,3 +356,75 @@ exports.deleteOrder = async (req, res) => {
         });
     }
 };
+
+// Fetch all notifications for a user
+exports.getUserNotifications = async (req, res) => {
+    try {
+        const userId = req.userId; // Assuming `req.userId` is set by your auth middleware
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+
+        // Fetch all orders for the user
+        const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
+
+        // Generate notifications based on order statuses
+        const notifications = orders.map(order => {
+            const orderIdShort = order._id.toString().slice(-6);
+            let title = 'Order Update';
+            let body = '';
+            let screen = 'OrderDetail';
+
+            switch (order.orderStatus) {
+                case 'Processing':
+                    title = 'Order Processing';
+                    body = `Your order #${orderIdShort} is now being processed.`;
+                    break;
+                case 'Confirmed':
+                    title = 'Order Confirmed';
+                    body = `Your order #${orderIdShort} has been confirmed.`;
+                    break;
+                case 'Shipped':
+                    title = 'Order Shipped';
+                    body = `Good news! Your order #${orderIdShort} has been shipped.`;
+                    break;
+                case 'Delivered':
+                    title = 'Order Delivered';
+                    body = `Your order #${orderIdShort} has been delivered.`;
+                    break;
+                case 'Cancelled':
+                    title = 'Order Cancelled';
+                    body = `Your order #${orderIdShort} has been cancelled.`;
+                    break;
+                default:
+                    body = `Your order #${orderIdShort} status is ${order.orderStatus}.`;
+            }
+
+            return {
+                orderId: order._id,
+                title,
+                body,
+                orderStatus: order.orderStatus,
+                timestamp: order.updatedAt || order.createdAt,
+                screen,
+            };
+        });
+
+        res.status(200).json({
+            success: true,
+            notifications,
+        });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch notifications',
+            error: error.message,
+        });
+    }
+};

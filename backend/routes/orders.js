@@ -6,7 +6,8 @@ const {
     myOrders,
     getAllOrders,
     updateOrder,
-    deleteOrder
+    deleteOrder,
+    getUserNotifications // Import the new function
 } = require('../controllers/OrderController');
 
 const { isAuthenticatedUser } = require("../middlewares/Auth");
@@ -15,10 +16,11 @@ const { isAuthenticatedUser } = require("../middlewares/Auth");
 router.post('/create', isAuthenticatedUser, createOrder);
 router.get('/myorders', isAuthenticatedUser, myOrders);
 router.get('/myorder/:id', isAuthenticatedUser, getSingleOrder);
+router.get('/notifications', isAuthenticatedUser, getUserNotifications); // Add this route
 
 // Admin routes
-router.get('/all', isAuthenticatedUser,  getAllOrders);
+router.get('/all', isAuthenticatedUser, getAllOrders);
 router.put('/update/:id', isAuthenticatedUser, updateOrder);
-router.delete('/delete/:id', isAuthenticatedUser,  deleteOrder);
+router.delete('/delete/:id', isAuthenticatedUser, deleteOrder);
 
 module.exports = router;

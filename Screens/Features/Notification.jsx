@@ -1,46 +1,117 @@
-import React from 'react';
-import { StyleSheet, Text, View, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+  StatusBar,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // Make sure to import Ionicons
 import BottomNavigator from '../../Navigators/BottomNavigator';
+import { getToken } from '../../sqlite_db/Auth';
+import baseURL from '../../assets/common/baseurl';
 
-// Updated color palette
 const COLORS = {
-  primary: '#2c3e50',      // Dark blue-gray
-  primaryLight: '#34495e', // Slightly lighter blue-gray
-  primaryDark: '#1a2530',  // Darker blue-gray
-  white: '#ffffff',        // Pure white
-  light: '#ecf0f1',        // Light gray
-  grey: '#bdc3c7',         // Medium gray
-  darkGrey: '#7f8c8d',     // Darker gray
-  text: '#2c3e50',         // Text in dark blue-gray
-  textLight: '#7f8c8d',    // Light text in gray
-  success: '#2ecc71',      // Success green
-  warning: '#f39c12',      // Warning orange
-  danger: '#e74c3c',       // Danger red
-  shadow: 'rgba(44, 62, 80, 0.15)', // Shadow based on primary color
-  accent: '#3498db',       // Accent blue
+  primary: '#2c3e50',
+  primaryLight: '#34495e',
+  primaryDark: '#1a2530',
+  white: '#ffffff',
+  light: '#ecf0f1',
+  grey: '#bdc3c7',
+  darkGrey: '#7f8c8d',
+  text: '#2c3e50',
+  textLight: '#7f8c8d',
+  success: '#2ecc71',
+  warning: '#f39c12',
+  danger: '#e74c3c',
+  shadow: 'rgba(44, 62, 80, 0.15)',
+  accent: '#3498db',
 };
 
-// Notice the { navigation } parameter here - this is crucial
-const CartScreen = ({ navigation }) => {
+const NotificationScreen = ({ navigation }) => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch notifications from the backend
+  const fetchNotifications = async () => {
+    try {
+      const auth = await getToken();
+      if (!auth) return;
+
+      const response = await fetch(`${baseURL}/api/orders/notifications`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.authToken}`,
+        },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setNotifications(data.notifications);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const renderNotificationItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.notificationItem}
+      onPress={() => navigation.navigate('OrderDetails', { orderId: item.orderId })}
+    >
+      <Text style={styles.notificationTitle}>{item.title}</Text>
+      <Text style={styles.notificationBody}>{item.body}</Text>
+      <Text style={styles.notificationTimestamp}>
+        {new Date(item.timestamp).toLocaleString()}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-
-      
-      {/* Cart Content */}
-      <View style={styles.content}>
-        <Text style={styles.emptyText}>Cart is empty</Text>
+      <View style={styles.header}>
+        {/* Add back button */}
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Notifications</Text>
       </View>
-      
-      {/* Bottom Navigation */}
+
+      <View style={styles.content}>
+        {loading ? (
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        ) : notifications.length > 0 ? (
+          <FlatList
+            data={notifications}
+            keyExtractor={(item) => item.orderId.toString()}
+            renderItem={renderNotificationItem}
+          />
+        ) : (
+          <Text style={styles.emptyText}>No notifications available</Text>
+        )}
+      </View>
+
       <View style={styles.bottomNavContainer}>
-        <BottomNavigator navigation={navigation} activeScreen="Cart" />
+        <BottomNavigator navigation={navigation} activeScreen="Notifications" />
       </View>
     </View>
   );
 };
 
-export default CartScreen;
+export default NotificationScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -57,27 +128,52 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
+    flexDirection: 'row', // Add this for proper layout
+    alignItems: 'center', // Center items vertically
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  backButton: {
+    padding: 8,
+    marginRight: 10,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: COLORS.white,
-    letterSpacing: 1,
+    textAlign: 'center',
+    flex: 1, // This centers the text with the back button present
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    padding: 10,
+  },
+  notificationItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.grey,
+    backgroundColor: COLORS.white,
+    marginBottom: 8,
+    borderRadius: 8,
+    elevation: 1,
+  },
+  notificationTitle: {
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    fontSize: 16,
+  },
+  notificationBody: {
+    color: COLORS.darkGrey,
+    fontSize: 14,
+    marginVertical: 5,
+  },
+  notificationTimestamp: {
+    fontSize: 12,
+    color: COLORS.textLight,
   },
   emptyText: {
     fontSize: 16,
     color: COLORS.textLight,
+    textAlign: 'center',
+    marginTop: 20,
   },
   bottomNavContainer: {
     position: 'absolute',
@@ -92,5 +188,5 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     borderTopWidth: 1,
     borderTopColor: COLORS.light,
-  }
+  },
 });

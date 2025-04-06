@@ -103,26 +103,6 @@ export default function App() {
   useEffect(() => {
     console.log('🔔 Setting up Firebase Cloud Messaging...');
     
-    // Create Android notification channel
-    if (Platform.OS === 'android') {
-      try {
-        // Use direct messaging().createChannel API instead of AndroidChannel constructor
-        messaging()
-          .createChannel({
-            id: 'shoeshable-orders',
-            name: 'Order Notifications',
-            description: 'Notifications about your shoe orders',
-            importance: 4, // HIGH importance (4)
-            sound: 'default',
-            vibration: true,
-            lightColor: '#1976D2'
-          })
-          .then(() => console.log('✅ Notification channel created'))
-          .catch(err => console.error('❌ Failed to create channel:', err));
-      } catch (error) {
-        console.error('Error creating notification channel:', error);
-      }
-    }
     
     // Request permission for notifications
     const requestUserPermission = async () => {
