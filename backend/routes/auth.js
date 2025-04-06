@@ -7,7 +7,8 @@ const {
     googleLogin, 
     getUserData, 
     updateProfile,
-    updateFCMToken // Add this import
+    updateFCMToken,
+    getAllUsers,
 } = require('../controllers/Auth');
 const { isAuthenticatedUser } = require("../middlewares/Auth");
 const upload = require("../utils/multer");
@@ -25,5 +26,8 @@ router.put('/profile/update', isAuthenticatedUser, upload.single("profileImage")
 
 // FCM token update route
 router.post('/update-fcm-token', isAuthenticatedUser, updateFCMToken);
+
+//get users
+router.get('/users', getAllUsers);
 
 module.exports = router;
