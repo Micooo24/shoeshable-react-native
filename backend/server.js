@@ -17,6 +17,7 @@ const featuredRoutes = require('./routes/features'); // Import the featured rout
 const reviewRoutes = require('./routes/reviews'); // Import the review route
 const userRoutes = require('./routes/user'); // Import the user route
 // const wishlistRoutes = require('./routes/wishlist'); // Import the wishlist route
+const promotionRoutes = require('./routes/promotions'); // Import the promotion route
 // Mongoose
 mongoose
     .connect(process.env.DATABASE, {
@@ -53,6 +54,7 @@ app.use("/api/features", featuredRoutes); // Use the featured routes
 app.use("/api/reviews", reviewRoutes); // Use the review route
 app.use("/api/users", userRoutes); // Use the user route
 // app.use("/api/wishlist", wishlistRoutes); // Use the wishlist route
+app.use("/api/promotions", promotionRoutes); // Use the promotion route
 
 
 app.use((req, res, next) => {
