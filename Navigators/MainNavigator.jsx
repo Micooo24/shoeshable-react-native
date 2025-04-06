@@ -14,6 +14,7 @@ import AdminNavigator from "./AdminDrawer";
 import OrderDetails from '../Screens/Features/OrderDetails';
 import Notification from '../Screens/Features/Notification';
 import baseURL from '../assets/common/baseurl';
+import PromotionDetails from '../Screens/Features/PromotionDetails';
 
 const Stack = createNativeStackNavigator();
 
@@ -71,6 +72,7 @@ const MainNavigator = () => {
       <Stack.Screen name="Checkout" component={Checkout} options={{ headerShown: false }} />
       <Stack.Screen name="OrderDetails" component={OrderDetails} options={{ headerShown: false }} />
       <Stack.Screen name="Notification" component={Notification} options={{ headerShown: false }} />
+      <Stack.Screen name="PromotionDetails" component={PromotionDetails} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };
