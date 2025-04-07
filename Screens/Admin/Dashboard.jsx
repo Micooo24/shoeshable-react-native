@@ -237,14 +237,15 @@ const Dashboard = ({ navigation }) => {
     extrapolate: 'clamp'
   });
 
-  // Format revenue data for chart
+  // Format revenue data for chart - FIXED to show correct Peso values
   const getRevenueChartData = () => {
     const labels = Object.keys(revenueByDay).map(date => {
       const [year, month, day] = date.split('-');
       return `${month}/${day}`;
     });
     
-    const data = Object.values(revenueByDay).map(value => value / 100); // Convert to currency unit
+    // Removed division by 100 to maintain proper peso values
+    const data = Object.values(revenueByDay);
     
     return {
       labels,
@@ -258,9 +259,10 @@ const Dashboard = ({ navigation }) => {
     };
   };
 
-  // Format currency
+  // Format currency - FIXED to show correct Peso values
   const formatCurrency = (amount) => {
-    return `₱${(amount / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    // Removed division by 100 to maintain proper peso values
+    return `₱${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
   };
 
   // Render widget item
@@ -456,25 +458,7 @@ const Dashboard = ({ navigation }) => {
           <Text style={styles.headerTitle}>Dashboard</Text>
           
           <View style={styles.headerIcons}>
-            <TouchableOpacity 
-              style={styles.iconButton}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="notifications-outline" size={24} color={COLORS.light} />
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{orderStats.processingCount}</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.profileButton}
-              activeOpacity={0.7}
-            >
-              <Image 
-                source={{ uri: 'https://i.pravatar.cc/150?img=12' }} 
-                style={styles.headerProfileImage} 
-              />
-            </TouchableOpacity>
+
           </View>
         </LinearGradient>
       </Animated.View>
@@ -514,64 +498,10 @@ const Dashboard = ({ navigation }) => {
             <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
           </View>
         </Animated.View>
-        
-        {/* Quick Stats Row */}
-        <View style={styles.statsRow}>
-          <Animated.View 
-            style={[
-              styles.statItem, 
-              { 
-                backgroundColor: 'rgba(52, 152, 219, 0.15)',
-                transform: [{
-                  translateY: cardAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0]
-                  })
-                }],
-                opacity: cardAnim
-              }
-            ]}
-          >
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.accent }]}>
-              <FontAwesome5 name="chart-line" size={14} color={COLORS.white} />
-            </View>
-            <View>
-              <Text style={styles.statValue}>{formatCurrency(orderStats.totalAmount)}</Text>
-              <Text style={styles.statLabel}>Total Revenue</Text>
-            </View>
-          </Animated.View>
-          
-          <Animated.View 
-            style={[
-              styles.statItem, 
-              { 
-                backgroundColor: 'rgba(46, 204, 113, 0.15)',
-                transform: [{
-                  translateY: cardAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0]
-                  })
-                }],
-                opacity: cardAnim
-              }
-            ]}
-          >
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.success }]}>
-              <FontAwesome5 name="shipping-fast" size={14} color={COLORS.white} />
-            </View>
-            <View>
-              <Text style={styles.statValue}>{orderStats.processingCount + orderStats.shippedCount}</Text>
-              <Text style={styles.statLabel}>Active Orders</Text>
-            </View>
-          </Animated.View>
-        </View>
-        
-        {/* Widgets Container - Enhanced with Staggered Animation */}
         <View style={styles.widgetsContainer}>
           {getWidgets().map((widget, index) => renderWidget(widget, index))}
         </View>
-        
-        {/* Order Status Breakdown */}
+
         <Animated.View 
           style={[
             styles.chartContainer,

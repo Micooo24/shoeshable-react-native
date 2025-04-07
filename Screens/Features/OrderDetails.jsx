@@ -398,16 +398,6 @@ const OrderDetails = ({ navigation }) => {
               Are you sure you want to cancel this order? This action cannot be undone.
             </Text>
             
-            <Text style={styles.modalLabel}>Reason for cancellation (optional)</Text>
-            <TextInput
-              style={styles.reasonInput}
-              value={cancelReason}
-              onChangeText={setCancelReason}
-              placeholder="Enter reason for cancellation"
-              multiline={true}
-              maxLength={200}
-            />
-            
             <View style={styles.modalActions}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelModalButton]} 

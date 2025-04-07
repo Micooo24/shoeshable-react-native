@@ -463,6 +463,7 @@ exports.searchProducts = async (req, res) => {
 };
 exports.filterProducts = async (req, res) => {
   try {
+    // Get filter params from query
     const { 
       category, 
       brand, 
@@ -473,6 +474,9 @@ exports.filterProducts = async (req, res) => {
       sort 
     } = req.query;
 
+    console.log('Filter params:', { category, brand, gender, minPrice, maxPrice, color, sort });
+
+    // Build filter object
     const filter = {};
 
     if (category) {
@@ -488,9 +492,11 @@ exports.filterProducts = async (req, res) => {
     }
 
     if (color) {
+      // For colors, we need to search in the array
       filter.color = color.toLowerCase();
     }
 
+    // Price range - handle as integers (stored in cents/centavos)
     if (minPrice || maxPrice) {
       filter.price = {};
       
@@ -502,6 +508,10 @@ exports.filterProducts = async (req, res) => {
         filter.price.$lte = Number(maxPrice);
       }
     }
+
+    console.log('MongoDB filter:', filter);
+
+    // Determine sort options
     let sortOption = { createdAt: -1 }; // Default: newest first
     
     if (sort) {
@@ -515,10 +525,16 @@ exports.filterProducts = async (req, res) => {
         case 'name_asc':
           sortOption = { name: 1 };
           break;
+        // Default case is already set
       }
     }
 
+    // Execute query
     const products = await Product.find(filter).sort(sortOption);
+
+    console.log(`Found ${products.length} products matching filters`);
+
+    // Return successful response with products
     res.status(200).json({
       message: "Products filtered successfully",
       count: products.length,

@@ -15,7 +15,8 @@ const upload = require("../utils/multer");
 
 
 //Authentication routes through Firebase
-router.post("/signup", Register);
+// router.post("/signup", Register);
+router.post("/signup", upload.single("profileImage"), Register);;
 router.post("/login", Login);
 router.post("/google-login", googleLogin);
 

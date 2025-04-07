@@ -8,6 +8,9 @@ require('dotenv').config();
 // App
 const app = express();
 
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
+
 //Routes
 const productRoutes = require('./routes/products');
 const authRoutes = require("./routes/auth");

@@ -24,8 +24,8 @@ import * as FileSystem from "expo-file-system";
 
 const Profile = ({ navigation }) => {
   const dispatch = useDispatch();
-  // Add mounted ref to prevent state updates after unmounting
   const isMounted = useRef(true);
+  const [selectedImageUri, setSelectedImageUri] = useState(null);
 
   // State for orders
   const [orders, setOrders] = useState([]);
@@ -33,7 +33,7 @@ const Profile = ({ navigation }) => {
     toPay: 0,
     toShip: 0,
     toDeliver: 0,
-    toRate: 0
+    toRate: 0,
   });
   const [ordersLoading, setOrdersLoading] = useState(false);
 
@@ -137,6 +137,7 @@ const Profile = ({ navigation }) => {
 
         // Reset new profile image when fetching fresh data
         setNewProfileImage(null);
+        setSelectedImageUri(null);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -150,7 +151,6 @@ const Profile = ({ navigation }) => {
     }
   };
 
-  // New function to fetch orders directly with mounted check
   const fetchOrders = async () => {
     try {
       const tokenData = await getToken();
@@ -158,30 +158,36 @@ const Profile = ({ navigation }) => {
         console.log("No auth token found");
         return;
       }
-      
+
       if (!isMounted.current) return;
       setOrdersLoading(true);
-      
-      const response = await axios.get(
-        `${baseURL}/api/users/orders`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenData.authToken}`
-          }
-        }
-      );
-      
-      if (response.status === 200 && response.data.success && isMounted.current) {
-        console.log("Orders fetched successfully:", response.data.orders?.length || 0);
+
+      const response = await axios.get(`${baseURL}/api/users/orders`, {
+        headers: {
+          Authorization: `Bearer ${tokenData.authToken}`,
+        },
+      });
+
+      if (
+        response.status === 200 &&
+        response.data.success &&
+        isMounted.current
+      ) {
+        console.log(
+          "Orders fetched successfully:",
+          response.data.orders?.length || 0
+        );
         console.log("Order counts:", JSON.stringify(response.data.orderCounts));
-        
+
         setOrders(response.data.orders || []);
-        setOrderCounts(response.data.orderCounts || {
-          toPay: 0,
-          toShip: 0,
-          toDeliver: 0,
-          toRate: 0
-        });
+        setOrderCounts(
+          response.data.orderCounts || {
+            toPay: 0,
+            toShip: 0,
+            toDeliver: 0,
+            toRate: 0,
+          }
+        );
       } else {
         if (isMounted.current) {
           console.error("Failed to fetch orders:", response.data);
@@ -200,7 +206,6 @@ const Profile = ({ navigation }) => {
     }
   };
 
-  // Pick an image from gallery
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -209,55 +214,85 @@ const Profile = ({ navigation }) => {
         aspect: [1, 1],
         quality: 0.7,
       });
-
+  
       if (!result.canceled && isMounted.current) {
-        const base64Image = await uriToBase64(result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        setSelectedImageUri(uri);
+        
+        const base64Image = await uriToBase64(uri);
         setNewProfileImage(base64Image);
+        
+        return uri;
       }
+      return null;
     } catch (error) {
       console.error("Error picking image:", error);
       if (isMounted.current) {
         Alert.alert("Error", "Failed to pick image from gallery");
       }
+      return null;
     }
   };
 
-  // Function to update user profile with new image
+  const handlePickImage = async () => {
+    await pickImage();
+  };
+
   const updateProfile = async () => {
     try {
       if (!isMounted.current) return;
       setIsLoading(true);
-
+  
       const tokenData = await getToken();
       if (!tokenData || !tokenData.authToken) {
         if (isMounted.current) {
-          Alert.alert("Error", "You need to be logged in to update your profile");
+          Alert.alert(
+            "Error",
+            "You need to be logged in to update your profile"
+          );
         }
         return;
       }
-
-      const formattedData = {
-        ...profileForm,
-        phoneNumber: parseInt(profileForm.phoneNumber, 10) || 0,
-        zipCode: parseInt(profileForm.zipCode, 10) || 0,
-      };
-
-      // If there's a new profile image, add it to the request body
-      if (newProfileImage) {
-        formattedData.profileImage = newProfileImage;
+  
+      // Create FormData object
+      const formData = new FormData();
+      
+      // Add user profile information to FormData
+      formData.append('firstName', profileForm.firstName);
+      formData.append('lastName', profileForm.lastName);
+      formData.append('phoneNumber', profileForm.phoneNumber);
+      formData.append('address', profileForm.address);
+      formData.append('zipCode', profileForm.zipCode);
+  
+      // If there's a selected image, add it to the FormData
+      if (selectedImageUri) {
+        // Get filename from URI
+        const filename = selectedImageUri.split('/').pop();
+        
+        // Determine the mime type based on the file extension
+        const match = /\.(\w+)$/.exec(filename || '');
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+  
+        // Append the image to the form data
+        formData.append('profileImage', {
+          uri: selectedImageUri,
+          name: filename,
+          type,
+        });
       }
-
+  
+      // Use multipart/form-data for uploading file
       const response = await axios.put(
         `${baseURL}/api/auth/profile/update`,
-        formattedData,
+        formData,
         {
           headers: {
-            Authorization: `Bearer ${tokenData.authToken}`,
-            "Content-Type": "application/json",
+            'Authorization': `Bearer ${tokenData.authToken}`,
+            'Content-Type': 'multipart/form-data',
           },
         }
       );
-
+  
       if (response.data && response.data.success && isMounted.current) {
         Alert.alert("Success", "Profile updated successfully");
         // Refresh profile data
@@ -281,7 +316,9 @@ const Profile = ({ navigation }) => {
       }
     } finally {
       if (isMounted.current) {
-        setIsLoading(false);
+        setNewProfileImage(null);
+        setSelectedImageUri(null);
+        setIsModalVisible(true);
       }
     }
   };
@@ -319,7 +356,7 @@ const Profile = ({ navigation }) => {
     checkLoginStatus();
 
     // Refresh orders when the component is focused
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener("focus", () => {
       if (isLoggedIn && isMounted.current) {
         fetchOrders();
       }
@@ -349,7 +386,7 @@ const Profile = ({ navigation }) => {
           toPay: 0,
           toShip: 0,
           toDeliver: 0,
-          toRate: 0
+          toRate: 0,
         });
         Alert.alert("Success", "You have been logged out successfully.");
       }
@@ -380,7 +417,7 @@ const Profile = ({ navigation }) => {
   // Render count badge using local state
   const renderCountBadge = (countKey) => {
     const count = orderCounts[countKey] || 0;
-    
+
     if (count > 0) {
       return (
         <View style={styles.countBadge}>
@@ -403,10 +440,16 @@ const Profile = ({ navigation }) => {
   };
 
   // Memoize image uri to prevent unnecessary re-renders
-  const avatarUri = React.useMemo(() => ({ uri: userData.avatar }), [userData.avatar]);
-  const profileImageUri = React.useMemo(() => ({ 
-    uri: newProfileImage || userData.avatar
-  }), [newProfileImage, userData.avatar]);
+  const avatarUri = React.useMemo(
+    () => ({ uri: userData.avatar }),
+    [userData.avatar]
+  );
+  const profileImageUri = React.useMemo(
+    () => ({
+      uri: newProfileImage || userData.avatar,
+    }),
+    [newProfileImage, userData.avatar]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -605,7 +648,7 @@ const Profile = ({ navigation }) => {
               ))}
             </View>
           </View>
-          
+
           {/* Recent Orders Section */}
           <View style={styles.purchasesContainer}>
             <View style={styles.sectionHeaderRow}>
@@ -663,7 +706,7 @@ const Profile = ({ navigation }) => {
                           </Text>
                         </View>
                         <Text style={styles.orderPrice}>
-                          ${(order.totalPrice / 100).toFixed(2)}
+                          ₱{order.totalPrice.toFixed(2)}
                         </Text>
                       </TouchableOpacity>
 
@@ -703,12 +746,9 @@ const Profile = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Additional space at bottom */}
           <View style={styles.emptySpace} />
         </View>
       </ScrollView>
-
-      {/* Profile Edit Modal */}
       <Modal
         visible={isModalVisible}
         transparent={true}
@@ -717,39 +757,45 @@ const Profile = ({ navigation }) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Profile</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setIsModalVisible(false)}
+              >
+                <Icon name="close" size={24} color={COLORS.dark} />
+              </TouchableOpacity>
+            </View>
 
             {isLoading ? (
-              <ActivityIndicator
-                size="large"
-                color={COLORS.primary}
-                style={{ marginVertical: 20 }}
-              />
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Updating profile...</Text>
+              </View>
             ) : (
-              <>
+              <ScrollView
+                style={styles.modalScrollView}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
                 {/* Profile Image Section */}
                 <View style={styles.profileImageContainer}>
                   <Image
                     source={profileImageUri}
                     style={styles.profileImagePreview}
-                    onError={(e) => {
-                      console.log(
-                        "Error loading profile image preview:",
-                        e.nativeEvent.error
-                      );
+                    onError={() => {
+                      // If image fails to load, set to default
+                      if (isMounted.current) {
+                        setNewProfileImage(null);
+                      }
                     }}
                   />
                   <TouchableOpacity
-                    style={[
-                      styles.imageButton,
-                      { width: "80%", marginTop: 10 },
-                    ]}
-                    onPress={pickImage}
+                    style={styles.imagePickerButton}
+                    onPress={handlePickImage}
                   >
-                    <Icon name="image" size={16} color={COLORS.white} />
-                    <Text style={styles.imageButtonText}>
-                      Choose from Gallery
-                    </Text>
+                    <Icon name="camera" size={16} color={COLORS.white} />
+                    <Text style={styles.imageButtonText}>Change Photo</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -762,6 +808,7 @@ const Profile = ({ navigation }) => {
                       setProfileForm({ ...profileForm, firstName: text })
                     }
                     placeholder="First Name"
+                    maxLength={50}
                   />
                 </View>
 
@@ -774,6 +821,7 @@ const Profile = ({ navigation }) => {
                       setProfileForm({ ...profileForm, lastName: text })
                     }
                     placeholder="Last Name"
+                    maxLength={50}
                   />
                 </View>
 
@@ -782,23 +830,29 @@ const Profile = ({ navigation }) => {
                   <TextInput
                     style={styles.input}
                     value={profileForm.phoneNumber}
-                    onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, phoneNumber: text })
-                    }
+                    onChangeText={(text) => {
+                      // Only allow numbers
+                      const cleaned = text.replace(/[^0-9]/g, "");
+                      setProfileForm({ ...profileForm, phoneNumber: cleaned });
+                    }}
                     placeholder="Phone Number"
                     keyboardType="phone-pad"
+                    maxLength={15}
                   />
                 </View>
 
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>Address</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, styles.multilineInput]}
                     value={profileForm.address}
                     onChangeText={(text) =>
                       setProfileForm({ ...profileForm, address: text })
                     }
                     placeholder="Address"
+                    multiline={true}
+                    numberOfLines={3}
+                    maxLength={200}
                   />
                 </View>
 
@@ -807,11 +861,14 @@ const Profile = ({ navigation }) => {
                   <TextInput
                     style={styles.input}
                     value={profileForm.zipCode}
-                    onChangeText={(text) =>
-                      setProfileForm({ ...profileForm, zipCode: text })
-                    }
+                    onChangeText={(text) => {
+                      // Only allow numbers
+                      const cleaned = text.replace(/[^0-9]/g, "");
+                      setProfileForm({ ...profileForm, zipCode: cleaned });
+                    }}
                     placeholder="Zip Code"
                     keyboardType="number-pad"
+                    maxLength={10}
                   />
                 </View>
 
@@ -824,13 +881,19 @@ const Profile = ({ navigation }) => {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.button, styles.saveButton]}
+                    style={[
+                      styles.button,
+                      styles.saveButton,
+                      (!profileForm.firstName || !profileForm.lastName) &&
+                        styles.disabledButton,
+                    ]}
                     onPress={updateProfile}
+                    disabled={!profileForm.firstName || !profileForm.lastName}
                   >
                     <Text style={styles.saveButtonText}>Save</Text>
                   </TouchableOpacity>
                 </View>
-              </>
+              </ScrollView>
             )}
           </View>
         </View>
@@ -860,7 +923,7 @@ const getOrderStatusColor = (status) => {
   if (statusLower === "processing" || statusLower === "pending")
     return `${COLORS.primary}20`;
 
-  return `${COLORS.accent}20`; // Default color
+  return `${COLORS.accent}20`;
 };
 
 const getOrderStatusTextColor = (status) => {

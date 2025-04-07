@@ -7,10 +7,6 @@ const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library'); // Import Google Auth Library
 const client = new OAuth2Client('80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com'); 
 
-
-
-
-//Register a new user
 exports.Register = async function (req, res) {
     const session = await mongoose.startSession(); // Start a session for transaction
     session.startTransaction();
@@ -46,7 +42,7 @@ exports.Register = async function (req, res) {
             try {
                 const result = await cloudinary.uploader.upload(profileImage.url, {
                     folder: 'users',
-                    public_id: profileImage.public_id, // Use the provided public_id
+                    public_id: profileImage.public_id,
                     overwrite: true,
                 });
 
@@ -60,7 +56,6 @@ exports.Register = async function (req, res) {
             }
         }
 
-        // Create a new User instance
         const newUser = new User({
             username,
             email,
@@ -70,7 +65,7 @@ exports.Register = async function (req, res) {
             phoneNumber,
             address,
             zipCode,
-            profileImage: uploadedImage, // Use the uploaded image
+            profileImage: uploadedImage, 
             firebaseUid,
             role: "user", // Set role as user
             status: "active", // Set default status as active
@@ -93,7 +88,6 @@ exports.Register = async function (req, res) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
-
 
 //Login with email and password comparison to the backend
 exports.Login = async function (req, res) {
@@ -310,7 +304,6 @@ exports.getUserData= async function (req, res, next) {
         res.status(500).json({ message: "Error fetching user profile" });
     }
 }
-
 //Update User Profile via middleware
 exports.updateProfile = async function (req, res, next) {
     try {
@@ -332,7 +325,7 @@ exports.updateProfile = async function (req, res, next) {
         try {
             // Update profile image if provided
             if (req.file) {
-                console.log("Uploaded file buffer:", req.file.buffer); // Debugging log
+                console.log("Uploaded file buffer:", req.file.buffer); 
                 const result = await new Promise((resolve, reject) => {
                     const stream = cloudinary.uploader.upload_stream(
                         { folder: 'users', width: 150, crop: "scale" },

@@ -1,14 +1,10 @@
 import SQLite from 'react-native-sqlite-storage';
 
-SQLite.DEBUG(true); // Set to false in production
+SQLite.DEBUG(true); 
 SQLite.enablePromise(true);
 
 let databaseInstance = null;
 
-/**
- * Initialize and get the database connection
- * @returns {Promise<SQLite.SQLiteDatabase>} The database connection
- */
 export const getDatabase = async () => {
   if (databaseInstance) {
     return databaseInstance;
@@ -28,9 +24,6 @@ export const getDatabase = async () => {
   }
 };
 
-/**
- * Close the database connection when the app is shutting down
- */
 export const closeDatabase = async () => {
   if (databaseInstance) {
     await databaseInstance.close();
