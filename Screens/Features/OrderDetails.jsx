@@ -238,8 +238,6 @@ const OrderDetails = ({ navigation }) => {
         {/* Order Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.orderIdLabel}>Order ID</Text>
-            <Text style={styles.orderId}>{order._id}</Text>
             <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
           </View>
           <OrderStatusBadge status={order.orderStatus} />

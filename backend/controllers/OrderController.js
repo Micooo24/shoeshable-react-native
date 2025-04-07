@@ -120,7 +120,7 @@ exports.getAllOrders = async (req, res) => {
 }
 
 
-// Corrected FCM notification sender function
+//FCM Notification function
 const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
     try {
       console.log(`Sending notification to token: ${fcmToken}`);
@@ -172,7 +172,7 @@ const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
     }
   };
 
-// Then modify your updateOrder function
+// Admin: Update order status
 exports.updateOrder = async (req, res) => {
     try {
         console.log('----------- UPDATE ORDER DEBUG -----------');
@@ -433,7 +433,6 @@ exports.getUserNotifications = async (req, res) => {
 // User-specific endpoint for cancelling their own orders
 exports.cancelOrderStatus = async (req, res) => {
     try {
-        console.log('----------- USER CANCEL ORDER DEBUG -----------');
         console.log('Request from user ID:', req.userId);
         console.log('Request body userId:', req.body.userId);
         console.log('Cancelling order ID:', req.params.id);
