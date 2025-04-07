@@ -8,6 +8,8 @@ import { ADD_PRODUCT,
   FETCH_ENUM_VALUES_SUCCESS } from '../constants';
 import baseURL from '../../assets/common/baseurl';
 
+const MAX_PRICE = 1000000;
+
 export const fetchEnumValues = () => async (dispatch) => {
   try {
     dispatch({ type: FETCH_ENUM_VALUES_REQUEST });
@@ -178,26 +180,6 @@ export const deleteProduct = (id) => async (dispatch) => {
   }
 };
 
-// Additional actions for shoe-specific features
-
-export const getProductsByCategory = (category) => async (dispatch) => {
-  try {
-    const response = await axios.get(`${baseURL}/api/products/category/${category}`);
-    dispatch({ type: GET_PRODUCTS, payload: response.data.products });
-  } catch (error) {
-    console.error('Error fetching products by category:', error);
-  }
-};
-
-export const getProductsByBrand = (brand) => async (dispatch) => {
-  try {
-    const response = await axios.get(`${baseURL}/api/products/brand/${brand}`);
-    dispatch({ type: GET_PRODUCTS, payload: response.data.products });
-  } catch (error) {
-    console.error('Error fetching products by brand:', error);
-  }
-};
-
 export const searchProducts = (filters) => async (dispatch) => {
   try {
     const queryParams = new URLSearchParams();
@@ -216,35 +198,63 @@ export const searchProducts = (filters) => async (dispatch) => {
   }
 };
 
-export const filterProducts = (filters) => async (dispatch) => {
-  try {
-    dispatch({ type: 'FILTER_PRODUCTS_REQUEST' });
-    
-    const queryParams = new URLSearchParams();
-    
-    // Add all filter parameters to the query
-    Object.keys(filters).forEach(key => {
-      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
-        queryParams.append(key, filters[key]);
+export const filterProducts = (filters) => {
+  return async (dispatch) => {
+    try {
+      dispatch({ type: SET_LOADING, payload: true });
+      
+      // Create query params from filters
+      const queryParams = new URLSearchParams();
+      
+      if (filters.category) {
+        queryParams.append('category', filters.category.toLowerCase());
       }
-    });
-    
-    const response = await axios.get(`${baseURL}/api/products/filter?${queryParams.toString()}`);
-    
-    dispatch({ 
-      type: GET_PRODUCTS,
-      payload: response.data.products 
-    });
-    
-    return response.data;
-  } catch (error) {
-    dispatch({ 
-      type: 'FILTER_PRODUCTS_FAILURE',
-      payload: error.response && error.response.data.error 
-        ? error.response.data.error 
-        : error.message 
-    });
-    console.error('Error filtering products:', error);
-    throw error;
-  }
+      
+      if (filters.brand) {
+        queryParams.append('brand', filters.brand.toLowerCase());
+      }
+      
+      if (filters.gender) {
+        queryParams.append('gender', filters.gender.toLowerCase());
+      }
+      
+      if (filters.minPrice && filters.minPrice > 0) {
+        queryParams.append('minPrice', filters.minPrice);
+      }
+      
+      if (filters.maxPrice && filters.maxPrice < MAX_PRICE) {
+        queryParams.append('maxPrice', filters.maxPrice);
+      }
+      
+      if (filters.color) {
+        queryParams.append('color', filters.color.toLowerCase());
+      }
+      
+      if (filters.sort) {
+        queryParams.append('sort', filters.sort);
+      }
+      
+      console.log(`Filter query: ${baseURL}/api/products/filter?${queryParams.toString()}`);
+      
+      const response = await axios.get(`${baseURL}/api/products/filter?${queryParams.toString()}`);
+      
+      console.log('Filter response:', response.data);
+      
+      dispatch({
+        type: SET_PRODUCTS,
+        payload: response.data.products || response.data
+      });
+      
+      dispatch({ type: SET_LOADING, payload: false });
+      
+      return response.data.products || response.data;
+    } catch (error) {
+      console.error('Error filtering products:', error);
+      dispatch({
+        type: SET_ERROR,
+        payload: error.response?.data?.message || 'An error occurred while filtering products'
+      });
+      throw error;
+    }
+  };
 };

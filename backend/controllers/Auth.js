@@ -37,7 +37,6 @@ exports.Register = async function (req, res) {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Upload the profile image to Cloudinary (if any)
         let uploadedImage = {
             public_id: 'default_public_id',
             url: 'default_url',
@@ -79,7 +78,6 @@ exports.Register = async function (req, res) {
 
         const savedUser = await newUser.save({ session });
 
-        // Commit the transaction
         await session.commitTransaction();
         session.endSession();
 

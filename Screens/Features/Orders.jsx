@@ -1,170 +1,100 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
   StyleSheet,
+  Text,
+  View,
   SafeAreaView,
-  StatusBar,
-  Image,
-  ActivityIndicator
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList
 } from 'react-native';
-import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { COLORS } from '../../Styles/profile';
+import { COLORS } from '../../Theme/color';
 
-const OrdersScreen = ({ route, navigation }) => {
-  const { status } = route.params || {};
-  const { orders, loading } = useSelector(state => state.orderData);
-  const [filteredOrders, setFilteredOrders] = useState([]);
+// Super simplified Orders component to fix text rendering issues
+const Orders = ({ route, navigation }) => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
   
-  // Status mappings for UI display
-  const statusMappings = {
-    'processing': { title: 'To Pay', icon: 'credit-card-outline', color: COLORS.warning },
-    'confirmed': { title: 'To Ship', icon: 'package-variant-closed', color: COLORS.info },
-    'shipped': { title: 'To Deliver', icon: 'truck-delivery-outline', color: COLORS.accent },
-    'delivered': { title: 'To Rate', icon: 'star-outline', color: COLORS.success }
-  };
-  
+  // We'll just use dummy data for now to debug rendering
   useEffect(() => {
-    // Filter orders based on the status parameter if provided
-    if (status && orders.length > 0) {
-      // Special filter for "To Rate" - delivered orders that aren't rated yet
-      if (status === 'delivered') {
-        setFilteredOrders(orders.filter(order => 
-          order.status === status && !order.isRated
-        ));
-      } else {
-        setFilteredOrders(orders.filter(order => order.status === status));
+    setOrders([
+      {
+        _id: '12345',
+        orderStatus: 'processing',
+        createdAt: new Date().toISOString(),
+        totalPrice: 99.99,
+        orderItems: [{ name: 'Product 1' }]
       }
-    } else {
-      // If no status provided or if we want to show all orders
-      setFilteredOrders(orders);
-    }
-  }, [status, orders]);
-  
-  const renderOrderItem = ({ item }) => {
-    const statusInfo = statusMappings[item.status] || { 
-      title: 'Unknown', 
-      icon: 'help-circle-outline',
-      color: COLORS.text
-    };
-    
-    // Format date
-    const orderDate = new Date(item.createdAt);
-    const formattedDate = orderDate.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-    
-    // Calculate total price
-    const totalPrice = item.totalPrice || item.orderItems.reduce(
-      (sum, item) => sum + (item.price * item.quantity), 0
-    );
-    
-    return (
-      <TouchableOpacity 
-        style={styles.orderCard}
-        onPress={() => navigation.navigate('OrderDetails', { orderId: item._id })}
-      >
-        <View style={styles.orderHeader}>
-          <View style={styles.orderIdContainer}>
-            <Text style={styles.orderIdLabel}>Order #</Text>
-            <Text style={styles.orderId}>{item._id.substring(item._id.length - 6).toUpperCase()}</Text>
-          </View>
-          <View style={[styles.statusChip, { backgroundColor: `${statusInfo.color}20` }]}>
-            <Icon name={statusInfo.icon} size={14} color={statusInfo.color} />
-            <Text style={[styles.statusText, { color: statusInfo.color }]}>
-              {statusInfo.title}
-            </Text>
-          </View>
-        </View>
+    ]);
+  }, []);
+
+  // Simplified render order item
+  const renderOrderItem = ({ item }) => (
+    <View style={styles.orderItem}>
+      <View style={styles.orderHeader}>
+        <Text style={styles.orderId}>Order #{item._id}</Text>
+        <Text style={styles.orderStatus}>{item.orderStatus}</Text>
+      </View>
+      
+      <View style={styles.orderSummary}>
+        <Text style={styles.orderDate}>
+          {new Date(item.createdAt).toLocaleDateString()}
+        </Text>
+        <Text style={styles.orderTotal}>
+          ${item.totalPrice.toFixed(2)}
+        </Text>
+      </View>
+      
+      <View style={styles.actionButtons}>
+        <TouchableOpacity style={styles.detailButton}>
+          <Text style={styles.buttonText}>View Details</Text>
+        </TouchableOpacity>
         
-        <View style={styles.orderDetails}>
-          <View style={styles.itemPreview}>
-            {item.orderItems && item.orderItems.length > 0 ? (
-              <FlatList
-                data={item.orderItems.slice(0, 3)} // Show max 3 items
-                horizontal
-                renderItem={({ item: orderItem }) => (
-                  <View style={styles.itemImageContainer}>
-                    <Image
-                      source={{ 
-                        uri: orderItem.product?.images?.[0]?.url || 'https://via.placeholder.com/100'
-                      }}
-                      style={styles.itemImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.itemCountBadge}>
-                      <Text style={styles.itemCountText}>{orderItem.quantity}</Text>
-                    </View>
-                  </View>
-                )}
-                keyExtractor={(item, index) => `${item._id || index}`}
-              />
-            ) : (
-              <Text style={styles.noItemsText}>No items</Text>
-            )}
-            
-            {item.orderItems && item.orderItems.length > 3 && (
-              <View style={styles.moreItemsBadge}>
-                <Text style={styles.moreItemsText}>+{item.orderItems.length - 3}</Text>
-              </View>
-            )}
-          </View>
-          
-          <View style={styles.orderFooter}>
-            <Text style={styles.orderDate}>{formattedDate}</Text>
-            <Text style={styles.orderTotal}>${totalPrice.toFixed(2)}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-  
+        {item.orderStatus === 'processing' && (
+          <TouchableOpacity style={styles.cancelButton}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
-      
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-left" size={24} color={COLORS.text} />
+          <Icon name="arrow-left" size={24} color={COLORS.primary} />
         </TouchableOpacity>
+        
         <Text style={styles.headerTitle}>
-          {status ? statusMappings[status]?.title || 'Orders' : 'All Orders'}
+          {route.params?.status ? route.params.status : 'Orders'}
         </Text>
-        <View style={styles.backButton} />
+        
+        <View style={styles.placeholder} />
       </View>
-      
+
       {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-      ) : filteredOrders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Icon name="package-variant" size={60} color={`${COLORS.text}30`} />
-          <Text style={styles.emptyText}>No orders found</Text>
-          <TouchableOpacity 
-            style={styles.shopNowButton}
-            onPress={() => navigation.navigate('Home')}
-          >
-            <Text style={styles.shopNowButtonText}>Shop Now</Text>
-          </TouchableOpacity>
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       ) : (
         <FlatList
-          data={filteredOrders}
+          data={orders}
           renderItem={renderOrderItem}
           keyExtractor={item => item._id}
           contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No orders found</Text>
+            </View>
+          }
         />
       )}
     </SafeAreaView>
@@ -174,36 +104,99 @@ const OrdersScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#ffffff',
+    padding: 16,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginTop: 33,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 8,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontWeight: 'bold',
+  },
+  placeholder: {
+    width: 40,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+  },
+  listContainer: {
+    padding: 16,
+  },
+  orderItem: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  orderId: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  orderStatus: {
+    color: '#3F51B5',
+  },
+  orderSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 10,
+  },
+  orderDate: {
+    color: '#757575',
+  },
+  orderTotal: {
+    fontWeight: 'bold',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  detailButton: {
+    backgroundColor: '#3F51B5',
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  cancelButton: {
+    borderColor: '#F44336',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    alignItems: 'center',
+  },
+  cancelText: {
+    color: '#F44336',
+    fontWeight: 'bold',
   },
   emptyContainer: {
     flex: 1,
@@ -213,134 +206,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: COLORS.text,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  shopNowButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-  },
-  shopNowButtonText: {
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  listContainer: {
-    padding: 12,
-  },
-  orderCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  orderIdContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  orderIdLabel: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginRight: 4,
-  },
-  orderId: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  statusChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  orderDetails: {
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 12,
-  },
-  itemPreview: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  itemImageContainer: {
-    position: 'relative',
-    marginRight: 8,
-  },
-  itemImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  itemCountBadge: {
-    position: 'absolute',
-    bottom: -5,
-    right: -5,
-    backgroundColor: COLORS.primary,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'white',
-  },
-  itemCountText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  moreItemsBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreItemsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textLight,
-  },
-  noItemsText: {
-    color: COLORS.textLight,
-    fontStyle: 'italic',
-  },
-  orderFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  orderDate: {
-    fontSize: 13,
-    color: COLORS.textLight,
-  },
-  orderTotal: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
+    color: '#757575',
+  }
 });
 
-export default OrdersScreen;
+export default Orders;

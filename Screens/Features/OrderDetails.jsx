@@ -6,7 +6,10 @@ import {
   ScrollView, 
   Image, 
   ActivityIndicator, 
-  TouchableOpacity 
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TextInput
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import axios from 'axios';
@@ -36,12 +39,16 @@ const OrderStatusBadge = ({ status }) => {
 
 const OrderDetails = ({ navigation }) => {
   const route = useRoute();
-  const { orderId } = route.params;
+  const { orderId, userId } = route.params; // Extract userId from route params
   
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [authToken, setAuthToken] = useState(null);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   // Get authentication when component mounts
   useEffect(() => {
@@ -50,7 +57,8 @@ const OrderDetails = ({ navigation }) => {
         const auth = await getToken();
         if (auth && auth.authToken) {
           setAuthToken(auth.authToken);
-          console.log("User authenticated, fetching order");
+          setCurrentUserId(auth.userId);
+          console.log("User authenticated, fetching order. User ID:", auth.userId);
         } else {
           console.log("No authentication found");
           setError("Please log in to view order details");
@@ -79,6 +87,11 @@ const OrderDetails = ({ navigation }) => {
     
     try {
       setLoading(true);
+      // If userId from route params exists, log it
+      if (userId) {
+        console.log("Using userId from route params:", userId);
+      }
+      
       const response = await axios.get(`${baseURL}/api/orders/myorder/${orderId}`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
@@ -87,6 +100,7 @@ const OrderDetails = ({ navigation }) => {
       
       if (response.data.success) {
         setOrder(response.data.order);
+        console.log("Order fetched successfully. Order user ID:", response.data.order.user);
       } else {
         setError('Failed to retrieve order details');
       }
@@ -108,6 +122,80 @@ const OrderDetails = ({ navigation }) => {
       setLoading(false);
     }
   };
+
+
+  // Check if order can be cancelled (Processing or Confirmed status)
+  const canCancelOrder = () => {
+    return order && ['Processing', 'Confirmed'].includes(order.orderStatus);
+  };
+
+ // Handle cancel order
+ const handleCancelOrder = async () => {
+  if (!authToken || !order) return;
+  
+  setCancelling(true);
+  try {
+    // Extract the orderId and userId properly
+    const orderId = order._id;
+    
+    // Use the userId from route params, or extract it from the order.user object, or use currentUserId
+    let orderUserId;
+    if (userId) {
+      orderUserId = userId;
+    } else if (order.user && typeof order.user === 'object' && order.user._id) {
+      orderUserId = order.user._id;
+    } else if (typeof order.user === 'string') {
+      orderUserId = order.user;
+    } else {
+      orderUserId = currentUserId;
+    }
+
+    console.log("Cancelling order ID:", orderId);
+    console.log("Using user ID for cancellation:", orderUserId);
+    
+    const response = await axios.put(
+      `${baseURL}/api/orders/cancel/${orderId}`,
+      { 
+        reason: cancelReason || 'Cancelled by customer',
+        userId: orderUserId // Send the correct user ID
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (response.data.success) {
+      setCancelModalVisible(false);
+      // Update the local order state with the cancelled status
+      setOrder(response.data.order);
+      Alert.alert(
+        'Order Cancelled',
+        'Your order has been successfully cancelled.',
+        [{ text: 'OK' }]
+      );
+    } else {
+      Alert.alert('Error', response.data.message || 'Failed to cancel order');
+    }
+  } catch (err) {
+    console.error('Error cancelling order:', err);
+    let errorMessage = 'Failed to cancel your order. Please try again.';
+    
+    if (err.response) {
+      if (err.response.status === 400) {
+        errorMessage = err.response.data.message || 'This order cannot be cancelled';
+      } else if (err.response.status === 403) {
+        errorMessage = 'You do not have permission to cancel this order';
+      }
+    }
+    Alert.alert('Error', errorMessage);
+  } finally {
+    setCancelling(false);
+  }
+};
+    
 
   // Keep using moment.js for date formatting as requested
   const formatDate = (dateString) => {
@@ -145,135 +233,211 @@ const OrderDetails = ({ navigation }) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Order Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.orderIdLabel}>Order ID</Text>
-          <Text style={styles.orderId}>{order._id}</Text>
-          <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
+    <>
+      <ScrollView style={styles.container}>
+        {/* Order Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.orderIdLabel}>Date</Text>
+            <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
+          </View>
+          <OrderStatusBadge status={order.orderStatus} />
         </View>
-        <OrderStatusBadge status={order.orderStatus} />
-      </View>
 
-      {/* Shipping Information */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Shipping Information</Text>
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Icon name="account" size={20} color="#1976D2" style={styles.infoIcon} />
-            <Text style={styles.infoText}>
-              {order.shippingInfo.firstName} {order.shippingInfo.lastName}
-            </Text>
+        {/* Cancel Order Button - Only show for eligible orders */}
+        {canCancelOrder() && (
+          <View style={styles.actionSection}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => setCancelModalVisible(true)}
+            >
+              <Icon name="cancel" size={18} color="white" style={styles.buttonIcon} />
+              <Text style={styles.buttonText}>Cancel Order</Text>
+            </TouchableOpacity>
           </View>
-          
-          <View style={styles.infoRow}>
-            <Icon name="map-marker" size={20} color="#1976D2" style={styles.infoIcon} />
-            <Text style={styles.infoText}>
-              {order.shippingInfo.address}, {order.shippingInfo.zipCode}
-            </Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Icon name="phone" size={20} color="#1976D2" style={styles.infoIcon} />
-            <Text style={styles.infoText}>{order.shippingInfo.phoneNumber}</Text>
-          </View>
-        </View>
-      </View>
+        )}
 
-      {/* Payment Information */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Information</Text>
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Icon 
-              name={order.paymentInfo.method === 'Cash on Delivery' ? 'cash' : 'credit-card'}
-              size={20} 
-              color="#1976D2" 
-              style={styles.infoIcon} 
-            />
-            <Text style={styles.infoText}>{order.paymentInfo.method}</Text>
-          </View>
-          
-          {order.paidAt && (
+        {/* Shipping Information */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Shipping Information</Text>
+          <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Icon name="calendar-check" size={20} color="#1976D2" style={styles.infoIcon} />
-              <Text style={styles.infoText}>Paid on {formatDate(order.paidAt)}</Text>
-            </View>
-          )}
-          
-          {order.deliveredAt && (
-            <View style={styles.infoRow}>
-              <Icon name="truck-delivery" size={20} color="#1976D2" style={styles.infoIcon} />
-              <Text style={styles.infoText}>Delivered on {formatDate(order.deliveredAt)}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Order Items */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Items</Text>
-        {order.orderItems.map(item => (
-          <View key={item._id} style={styles.productCard}>
-            <Image 
-              source={{ uri: item.productImage }}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>{item.productName}</Text>
-              <View style={styles.productDetails}>
-                <Text style={styles.productDetailText}>Size: {item.size}</Text>
-                <Text style={styles.productDetailText}>Color: {item.color}</Text>
-              </View>
-              <View style={styles.productPriceContainer}>
-                <Text style={styles.productQuantity}>{item.quantity} x</Text>
-                <Text style={styles.productPrice}>₱{item.productPrice.toLocaleString()}</Text>
-              </View>
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {/* Price Breakdown */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Price Details</Text>
-        <View style={styles.infoCard}>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Subtotal</Text>
-            <Text style={styles.priceValue}>₱{order.subtotal.toLocaleString()}</Text>
-          </View>
-          
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Shipping Fee</Text>
-            <Text style={styles.priceValue}>₱{order.shippingFee.toLocaleString()}</Text>
-          </View>
-          
-          {order.voucher && (
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>
-                Discount <Text style={styles.voucherCode}>({order.voucher.code})</Text>
+              <Icon name="account" size={20} color="#1976D2" style={styles.infoIcon} />
+              <Text style={styles.infoText}>
+                {order.shippingInfo.firstName} {order.shippingInfo.lastName}
               </Text>
-              <Text style={styles.discountValue}>-₱{order.discountAmount.toLocaleString()}</Text>
             </View>
-          )}
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.priceRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>₱{order.totalPrice.toLocaleString()}</Text>
+            
+            <View style={styles.infoRow}>
+              <Icon name="map-marker" size={20} color="#1976D2" style={styles.infoIcon} />
+              <Text style={styles.infoText}>
+                {order.shippingInfo.address}, {order.shippingInfo.zipCode}
+              </Text>
+            </View>
+            
+            <View style={styles.infoRow}>
+              <Icon name="phone" size={20} color="#1976D2" style={styles.infoIcon} />
+              <Text style={styles.infoText}>{order.shippingInfo.phoneNumber}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Payment Information */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Information</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <Icon 
+                name={order.paymentInfo.method === 'Cash on Delivery' ? 'cash' : 'credit-card'}
+                size={20} 
+                color="#1976D2" 
+                style={styles.infoIcon} 
+              />
+              <Text style={styles.infoText}>{order.paymentInfo.method}</Text>
+            </View>
+            
+            {order.paidAt && (
+              <View style={styles.infoRow}>
+                <Icon name="calendar-check" size={20} color="#1976D2" style={styles.infoIcon} />
+                <Text style={styles.infoText}>Paid on {formatDate(order.paidAt)}</Text>
+              </View>
+            )}
+            
+            {order.deliveredAt && (
+              <View style={styles.infoRow}>
+                <Icon name="truck-delivery" size={20} color="#1976D2" style={styles.infoIcon} />
+                <Text style={styles.infoText}>Delivered on {formatDate(order.deliveredAt)}</Text>
+              </View>
+            )}
+
+            {order.cancelledAt && (
+              <View style={styles.infoRow}>
+                <Icon name="cancel" size={20} color="#e74c3c" style={styles.infoIcon} />
+                <Text style={styles.infoText}>Cancelled on {formatDate(order.cancelledAt)}</Text>
+              </View>
+            )}
+
+            {order.cancellationReason && (
+              <View style={styles.infoRow}>
+                <Icon name="information-outline" size={20} color="#e74c3c" style={styles.infoIcon} />
+                <Text style={styles.infoText}>Reason: {order.cancellationReason}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Order Items */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Items</Text>
+          {order.orderItems.map(item => (
+            <View key={item._id} style={styles.productCard}>
+              <Image 
+                source={{ uri: item.productImage }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>{item.productName}</Text>
+                <View style={styles.productDetails}>
+                  <Text style={styles.productDetailText}>Size: {item.size}</Text>
+                  <Text style={styles.productDetailText}>Color: {item.color}</Text>
+                </View>
+                <View style={styles.productPriceContainer}>
+                  <Text style={styles.productQuantity}>{item.quantity} x</Text>
+                  <Text style={styles.productPrice}>₱{item.productPrice.toLocaleString()}</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Price Breakdown */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Price Details</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Subtotal</Text>
+              <Text style={styles.priceValue}>₱{order.subtotal.toLocaleString()}</Text>
+            </View>
+            
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Shipping Fee</Text>
+              <Text style={styles.priceValue}>₱{order.shippingFee.toLocaleString()}</Text>
+            </View>
+            
+            {order.voucher && order.voucher.code && (
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>
+                  Discount <Text style={styles.voucherCode}>({order.voucher.code})</Text>
+                </Text>
+                <Text style={styles.discountValue}>-₱{order.discountAmount.toLocaleString()}</Text>
+              </View>
+            )}
+            
+            <View style={styles.divider} />
+            
+            <View style={styles.priceRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>₱{order.totalPrice.toLocaleString()}</Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Cancel Order Modal */}
+      <Modal
+        visible={cancelModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setCancelModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Cancel Order</Text>
+            <Text style={styles.modalText}>
+              Are you sure you want to cancel this order? This action cannot be undone.
+            </Text>
+            
+            <Text style={styles.modalLabel}>Reason for cancellation (optional)</Text>
+            <TextInput
+              style={styles.reasonInput}
+              value={cancelReason}
+              onChangeText={setCancelReason}
+              placeholder="Enter reason for cancellation"
+              multiline={true}
+              maxLength={200}
+            />
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelModalButton]} 
+                onPress={() => setCancelModalVisible(false)}
+                disabled={cancelling}
+              >
+                <Text style={styles.cancelModalButtonText}>Keep Order</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmModalButton]}
+                onPress={handleCancelOrder}
+                disabled={cancelling}
+              >
+                {cancelling ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text style={styles.confirmModalButtonText}>Yes, Cancel</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 };
 
-// Styles remain unchanged
+
 const styles = StyleSheet.create({
-  // Your existing styles...
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -319,9 +483,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    marginTop: 20,
   },
   orderIdLabel: {
-    fontSize: 12,
+    fontSize: 15,
     color: '#7f8c8d',
   },
   orderId: {
@@ -345,6 +510,31 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  actionSection: {
+    padding: 15,
+    backgroundColor: 'white',
+    marginBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  cancelButton: {
+    backgroundColor: '#e74c3c',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 5,
+    alignSelf: 'flex-start',
+  },
+  buttonIcon: {
+    marginRight: 5,
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   section: {
     marginTop: 15,
@@ -465,6 +655,82 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#1976D2',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  reasonInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 14,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelModalButton: {
+    backgroundColor: '#f1f1f1',
+    marginRight: 10,
+  },
+  cancelModalButtonText: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  confirmModalButton: {
+    backgroundColor: '#e74c3c',
+    marginLeft: 10,
+  },
+  confirmModalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   }
 });
 

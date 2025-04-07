@@ -217,37 +217,36 @@ export const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: COLORS.error || 'red',
+    backgroundColor: '#e74c3c', // COLORS.error - hardcoded for clarity
     width: 20,
     height: 20,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
-    borderWidth: 1,
+    zIndex: 100, // Increased to ensure visibility
+    borderWidth: 1.5, // Slightly thicker border
     borderColor: 'white',
     // Add elevation for Android
-    elevation: 2,
+    elevation: 5,
     // Add shadow for iOS
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  
+  countText: {
+    color: 'white', // Explicitly white for better contrast
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 
   zeroCountBadge: {
     backgroundColor: COLORS.gray || '#CCCCCC',
   },
 
-  countText: {
-    color: 'black',
-    fontSize: 11,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  
-  
-  // Orders list
+
   ordersList: {
     marginTop: 4,
   },

@@ -1,13 +1,10 @@
 const Cart = require("../models/Cart");
 
-
-// Add an item to the cart of authenticated user
 exports.addToCart = async (req, res) => {
     const { productId, quantity = 1, brand, category, size, color, gender } = req.body;
     const userId = req.user.id; // Fetch user ID from the authenticated request
     const userEmail = req.user.email; // Fetch user email from the authenticated request
-  
-    // Validate required fields
+
     if (!productId || !brand || !category || !size || !color || !gender) {
       return res.status(400).json({
         success: false,
@@ -16,7 +13,6 @@ exports.addToCart = async (req, res) => {
     }
   
     try {
-      // Check if the item already exists in the cart for the user with the same attributes
       let cartItem = await Cart.findOne({
         userId,
         productId,
@@ -28,7 +24,6 @@ exports.addToCart = async (req, res) => {
       });
   
       if (cartItem) {
-        // If item exists, increment the quantity
         cartItem.quantity += quantity;
         await cartItem.save();
         return res.status(200).json({

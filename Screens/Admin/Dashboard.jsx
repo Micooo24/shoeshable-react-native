@@ -874,8 +874,7 @@ const Dashboard = ({ navigation }) => {
       </Animated.View>
     </SafeAreaView>
   );
-
-  // Helper function to calculate payment method distribution
+  
   function calculatePaymentMethods() {
     const methods = {};
     let total = 0;
