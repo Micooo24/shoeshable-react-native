@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 import axios from 'axios';
 import Home from '../Screens/Home';
 import AuthNavigator from './AuthNavigator';
@@ -20,28 +19,27 @@ const Stack = createNativeStackNavigator();
 
 const MainNavigator = () => {
   const [isAdmin, setIsAdmin] = useState(false);
-  const navigation = useNavigation(); // Use useNavigation to access navigation
 
+  // We can still fetch user data to set admin status, but won't navigate automatically
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await axios.get(`${baseURL}/api/auth/users`);
         const users = response.data.users;
-
-        // Assuming you have a way to identify the current user (e.g., via token or context)
-        const currentUser = users.find(user => user.email === 'admin@gmail.com'); // Replace with dynamic email or user ID
-
+        
+        // Check if admin but don't navigate away from Home
+        const currentUser = users.find(user => user.email === 'admin@gmail.com');
         if (currentUser && currentUser.role === 'admin') {
           setIsAdmin(true);
-          navigation.navigate('AdminNavigator'); // Navigate to AdminNavigator if admin
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
+        // Even if this fails, we stay on Home
       }
     };
 
     fetchUserData();
-  }, [navigation]);
+  }, []);
 
   return (
     <Stack.Navigator initialRouteName="Home">
@@ -55,6 +53,7 @@ const MainNavigator = () => {
         component={AuthNavigator}
         options={{ headerShown: false }}
       />
+      {/* Rest of your routes remain unchanged */}
       <Stack.Screen
         name="BottomNavigator"
         component={BottomNavigator}

@@ -150,60 +150,61 @@ export default function App() {
       return Promise.resolve();
     });
 
-        // Update the getInitialNotification handler
-
-        messaging().getInitialNotification().then(remoteMessage => {
-          if (remoteMessage) {
-            console.log('🚀 APP OPENED BY NOTIFICATION:');
-            console.log(JSON.stringify(remoteMessage, null, 2));
-            
-            // App was opened from a quit state by notification
-            // Handle navigation after app is ready
-            if (remoteMessage.data) {
-              // We need to wait for navigation to be ready
-              setTimeout(() => {
-                if (navigationRef.isReady()) {
-                  if (remoteMessage.data.orderId) {
-                    navigationRef.navigate('OrderDetails', { 
-                      orderId: remoteMessage.data.orderId 
-                    });
-                  } else if (remoteMessage.data.screen === 'PromotionDetails' && remoteMessage.data.promotionId) {
-                    console.log('Navigating to PromotionDetails from initial notification');
-                    navigationRef.navigate('PromotionDetails', {
-                      promotionId: remoteMessage.data.promotionId,
-                      productId: remoteMessage.data.productId
-                    });
-                  }
-                }
-              }, 1000); // Small delay to ensure navigation is ready
-            }
-          } else {
-            console.log('📱 App opened normally (not from notification)');
+      // Update the getInitialNotification handler
+messaging().getInitialNotification().then(remoteMessage => {
+  if (remoteMessage) {
+    console.log('🚀 APP OPENED BY NOTIFICATION:');
+    console.log(JSON.stringify(remoteMessage, null, 2));
+    
+    // App was opened from a quit state by notification
+    // Handle navigation after app is ready
+    if (remoteMessage.data) {
+      // We need to wait for navigation to be ready
+      setTimeout(() => {
+        if (navigationRef.isReady()) {
+          if (remoteMessage.data.orderId) {
+            navigationRef.navigate('OrderDetails', { 
+              orderId: remoteMessage.data.orderId,
+              userId: remoteMessage.data.userId || userAuth?.userId // Pass userId from notification or auth
+            });
+          } else if (remoteMessage.data.screen === 'PromotionDetails' && remoteMessage.data.promotionId) {
+            console.log('Navigating to PromotionDetails from initial notification');
+            navigationRef.navigate('PromotionDetails', {
+              promotionId: remoteMessage.data.promotionId,
+              productId: remoteMessage.data.productId
+            });
           }
+        }
+      }, 1000); // Small delay to ensure navigation is ready
+    }
+  } else {
+    console.log('📱 App opened normally (not from notification)');
+  }
+});
+       // Update the onNotificationOpenedApp handler
+messaging().onNotificationOpenedApp(remoteMessage => {
+  console.log('⏰ APP BROUGHT FROM BACKGROUND BY NOTIFICATION:');
+  console.log(JSON.stringify(remoteMessage, null, 2));
+  
+  // Handle navigation for app opened from background
+  if (remoteMessage.data) {
+    if (navigationRef.isReady()) {
+      if (remoteMessage.data.orderId) {
+        navigationRef.navigate('OrderDetails', { 
+          orderId: remoteMessage.data.orderId,
+          userId: remoteMessage.data.userId || userAuth?.userId // Pass userId from notification or auth
         });
+      } else if (remoteMessage.data.screen === 'PromotionDetails' && remoteMessage.data.promotionId) {
+        console.log('Navigating to PromotionDetails from background notification');
+        navigationRef.navigate('PromotionDetails', {
+          promotionId: remoteMessage.data.promotionId,
+          productId: remoteMessage.data.productId
+        });
+      }
+    }
+  }
+});
 
-        // Update the onNotificationOpenedApp handler
-        messaging().onNotificationOpenedApp(remoteMessage => {
-          console.log('⏰ APP BROUGHT FROM BACKGROUND BY NOTIFICATION:');
-          console.log(JSON.stringify(remoteMessage, null, 2));
-          
-          // Handle navigation for app opened from background
-          if (remoteMessage.data) {
-            if (navigationRef.isReady()) {
-              if (remoteMessage.data.orderId) {
-                navigationRef.navigate('OrderDetails', { 
-                  orderId: remoteMessage.data.orderId 
-                });
-              } else if (remoteMessage.data.screen === 'PromotionDetails' && remoteMessage.data.promotionId) {
-                console.log('Navigating to PromotionDetails from background notification');
-                navigationRef.navigate('PromotionDetails', {
-                  promotionId: remoteMessage.data.promotionId,
-                  productId: remoteMessage.data.productId
-                });
-              }
-            }
-          }
-        });
 
     requestUserPermission();
 
@@ -215,6 +216,7 @@ export default function App() {
   // Handle notification banner press
  // Update the handleNotificationPress function
 
+// Update the handleNotificationPress function
 const handleNotificationPress = () => {
   if (notification && notification.data) {
     try {
@@ -223,7 +225,8 @@ const handleNotificationPress = () => {
         console.log('Navigating to OrderDetails with orderId:', notification.data.orderId);
         if (navigationRef.isReady()) {
           navigationRef.navigate('OrderDetails', { 
-            orderId: notification.data.orderId
+            orderId: notification.data.orderId,
+            userId: notification.data.userId || userAuth?.userId // Pass userId from notification or auth
           });
         }
       } else if (notification.data.screen === 'PromotionDetails' && notification.data.promotionId) {

@@ -135,44 +135,56 @@ const handleUpdateCartItem = async (selectedItem, selectedSize, selectedColor) =
     }
   };
 
-  // Handler for increasing item quantity
-  const handleIncreaseQuantity = async (item) => {
-    try {
-      const productId = getProductId(item);
-      const quantity = (item.quantity || 1) + 1;
-      
-      const response = await dispatch(updateCartItemQuantity(productId, quantity));
-      
+// Handler for increasing item quantity
+const handleIncreaseQuantity = async (item) => {
+  try {
+    const productId = getProductId(item);
+    const quantity = (item.quantity || 1) + 1;
+    
+    const response = await dispatch(updateCartItemQuantity(productId, quantity));
+    
+    if (response && response.offline) {
+      setIsOffline(true);
+    }
+    
+    // Refresh the cart display immediately
+    dispatch(getCarts()).then(response => {
       if (response && response.offline) {
         setIsOffline(true);
       }
-    } catch (error) {
-      console.error('Error increasing quantity:', error);
+    });
+  } catch (error) {
+    console.error('Error increasing quantity:', error);
+  }
+};
+
+// Handler for decreasing item quantity
+const handleDecreaseQuantity = async (item) => {
+  try {
+    const productId = getProductId(item);
+    const quantity = (item.quantity || 1) - 1;
+    
+    let response;
+    if (quantity <= 0) {
+      response = await dispatch(removeFromCart(productId));
+    } else {
+      response = await dispatch(updateCartItemQuantity(productId, quantity));
     }
-  };
-  
-  // Handler for decreasing item quantity
-  const handleDecreaseQuantity = async (item) => {
-    try {
-      const productId = getProductId(item);
-      const quantity = (item.quantity || 1) - 1;
-      
-      if (quantity <= 0) {
-        const response = await dispatch(removeFromCart(productId));
-        if (response && response.offline) {
-          setIsOffline(true);
-        }
-      } else {
-        const response = await dispatch(updateCartItemQuantity(productId, quantity));
-        if (response && response.offline) {
-          setIsOffline(true);
-        }
+    
+    if (response && response.offline) {
+      setIsOffline(true);
+    }
+    
+    // Refresh the cart display immediately
+    dispatch(getCarts()).then(response => {
+      if (response && response.offline) {
+        setIsOffline(true);
       }
-    } catch (error) {
-      console.error('Error decreasing quantity:', error);
-    }
-  };
-  
+    });
+  } catch (error) {
+    console.error('Error decreasing quantity:', error);
+  }
+};
   // Handler for removing an item from cart
   const handleRemoveItem = async (item) => {
     const productId = getProductId(item);

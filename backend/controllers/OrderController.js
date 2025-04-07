@@ -428,3 +428,116 @@ exports.getUserNotifications = async (req, res) => {
         });
     }
 };
+
+
+// User-specific endpoint for cancelling their own orders
+exports.cancelOrderStatus = async (req, res) => {
+    try {
+        console.log('----------- USER CANCEL ORDER DEBUG -----------');
+        console.log('Request from user ID:', req.userId);
+        console.log('Request body userId:', req.body.userId);
+        console.log('Cancelling order ID:', req.params.id);
+        
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            console.log('Order not found with ID:', req.params.id);
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        console.log('Current order status:', order.orderStatus);
+        console.log('Order user ID (object):', order.user);
+        console.log('Order user ID (string):', order.user.toString());
+
+        // Allow cancellation if either authenticated user or userId in request body matches
+        const userIdFromBody = req.body.userId;
+        const isAuthorized = 
+            order.user.toString() === req.userId || 
+            (userIdFromBody && order.user.toString() === userIdFromBody);
+        
+        if (!isAuthorized) {
+            console.log('Unauthorized cancellation attempt');
+            console.log('Authenticated user ID:', req.userId);
+            console.log('User ID from request body:', userIdFromBody);
+            console.log('Order user ID (string):', order.user.toString());
+            return res.status(403).json({
+                success: false,
+                message: 'You can only cancel your own orders'
+            });
+        }
+
+        // Users can only cancel orders in specific statuses
+        const cancellableStatuses = ['Processing', 'Confirmed'];
+        if (!cancellableStatuses.includes(order.orderStatus)) {
+            console.log(`Order in ${order.orderStatus} status cannot be cancelled by user`);
+            return res.status(400).json({
+                success: false,
+                message: `Orders in ${order.orderStatus} status cannot be cancelled. Please contact customer service.`
+            });
+        }
+
+        // Get cancellation reason if provided
+        const cancellationReason = req.body.reason || 'Cancelled by customer';
+        console.log('Cancellation reason:', cancellationReason);
+
+        // Apply the cancellation
+        order.orderStatus = 'Cancelled';
+        order.cancellationReason = cancellationReason;
+        order.cancelledAt = Date.now();
+        
+        await order.save();
+        console.log('Order successfully cancelled by user');
+
+        // Send notification to the user for confirmation
+        try {
+            // Find the user who owns the order, not necessarily the authenticated user
+            const orderId = order._id.toString();
+            const userId = order.user.toString();
+            const user = await User.findById(userId);
+            
+            if (user && user.fcmToken) {
+                console.log('Sending cancellation confirmation to user:', userId);
+                console.log('FCM Token:', user.fcmToken);
+                
+                const orderIdShort = orderId.slice(-6);
+                const title = 'Order Cancellation Confirmed';
+                const body = `Your order #${orderIdShort} has been successfully cancelled.`;
+                
+                await sendFCMNotification(
+                    user.fcmToken, 
+                    title, 
+                    body,
+                    {
+                        orderId: orderId,
+                        userId: userId,
+                        orderStatus: 'Cancelled',
+                        screen: 'OrderDetail'
+                    }
+                );
+                console.log('Cancellation confirmation sent');
+            } else {
+                console.log('No FCM token available or user not found for notification');
+            }
+        } catch (notificationError) {
+            console.error('Error sending cancellation confirmation:', notificationError);
+            console.error('Notification error details:', notificationError.message);
+            // Continue with success response even if notification fails
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Your order has been cancelled successfully',
+            order
+        });
+    } catch (error) {
+        console.error('Error in user order cancellation:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Something went wrong while cancelling your order',
+            error: error.message
+        });
+    }
+};
