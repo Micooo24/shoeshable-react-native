@@ -175,9 +175,8 @@ const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
 // Then modify your updateOrder function
 exports.updateOrder = async (req, res) => {
     try {
-        console.log('----------- UPDATE ORDER DEBUG -----------');
-        console.log('Request Body:', req.body);
-        console.log('Order ID:', req.params.id);
+        // console.log('Request Body:', req.body);
+        // console.log('Order ID:', req.params.id);
         
         const order = await Order.findById(req.params.id);
 
@@ -207,7 +206,6 @@ exports.updateOrder = async (req, res) => {
             });
         }
 
-        // Check if status is sent with the correct field name
         const newStatus = req.body.status || req.body.orderStatus;
         console.log('New status to be applied:', newStatus);
         
@@ -219,7 +217,6 @@ exports.updateOrder = async (req, res) => {
             });
         }
         
-        // Validate if the status is valid
         const validStatuses = ['Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
         if (!validStatuses.includes(newStatus)) {
             console.log('ERROR: Invalid status value provided:', newStatus);
@@ -229,14 +226,12 @@ exports.updateOrder = async (req, res) => {
             });
         }
 
-        // Apply the new status
         order.orderStatus = newStatus;
         
         if (newStatus === 'Delivered') {
             console.log('Marking order as delivered, setting deliveredAt timestamp');
             order.deliveredAt = Date.now();
 
-            // If it was COD, mark as paid when delivered
             if (!order.paidAt && order.paymentInfo.method === 'Cash on Delivery') {
                 console.log('COD order being delivered - marking as paid');
                 order.paidAt = Date.now();
@@ -246,7 +241,6 @@ exports.updateOrder = async (req, res) => {
         await order.save();
         console.log('Order successfully updated to status:', newStatus);
 
-        // Send push notification to the user if requested
         if (req.body.sendNotification) {
             try {
                 // Get the user associated with this order
@@ -288,7 +282,6 @@ exports.updateOrder = async (req, res) => {
                             body = `Your order #${orderIdShort} status has been updated to ${newStatus}.`;
                     }
                     
-                    // Send the notification using our new function
                     await sendFCMNotification(
                         user.fcmToken, 
                         title, 
@@ -304,10 +297,8 @@ exports.updateOrder = async (req, res) => {
                     console.log('No FCM token available for user or user not found');
                 }
             } catch (notificationError) {
-                // Log the error but don't fail the order update
                 console.error('Error sending push notification:', notificationError);
-                
-                // Return partial success response
+
                 return res.status(200).json({
                     success: true,
                     message: 'Order status updated but notification failed',
@@ -360,7 +351,7 @@ exports.deleteOrder = async (req, res) => {
 // Fetch all notifications for a user
 exports.getUserNotifications = async (req, res) => {
     try {
-        const userId = req.userId; // Assuming `req.userId` is set by your auth middleware
+        const userId = req.userId; 
         const user = await User.findById(userId);
 
         if (!user) {
@@ -370,10 +361,8 @@ exports.getUserNotifications = async (req, res) => {
             });
         }
 
-        // Fetch all orders for the user
         const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
 
-        // Generate notifications based on order statuses
         const notifications = orders.map(order => {
             const orderIdShort = order._id.toString().slice(-6);
             let title = 'Order Update';
@@ -430,7 +419,7 @@ exports.getUserNotifications = async (req, res) => {
 };
 
 
-// User-specific endpoint for cancelling their own orders
+
 exports.cancelOrderStatus = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
@@ -443,21 +432,16 @@ exports.cancelOrderStatus = async (req, res) => {
             });
         }
 
-        console.log('Current order status:', order.orderStatus);
-        console.log('Order user ID (object):', order.user);
-        console.log('Order user ID (string):', order.user.toString());
-
-        // Allow cancellation if either authenticated user or userId in request body matches
         const userIdFromBody = req.body.userId;
         const isAuthorized = 
             order.user.toString() === req.userId || 
             (userIdFromBody && order.user.toString() === userIdFromBody);
         
         if (!isAuthorized) {
-            console.log('Unauthorized cancellation attempt');
-            console.log('Authenticated user ID:', req.userId);
-            console.log('User ID from request body:', userIdFromBody);
-            console.log('Order user ID (string):', order.user.toString());
+            // console.log('Unauthorized cancellation attempt');
+            // console.log('Authenticated user ID:', req.userId);
+            // console.log('User ID from request body:', userIdFromBody);
+            // console.log('Order user ID (string):', order.user.toString());
             return res.status(403).json({
                 success: false,
                 message: 'You can only cancel your own orders'
@@ -474,7 +458,6 @@ exports.cancelOrderStatus = async (req, res) => {
             });
         }
 
-        // Get cancellation reason
         const cancellationReason = req.body.reason || 'Cancelled by customer';
         console.log('Cancellation reason:', cancellationReason);
 

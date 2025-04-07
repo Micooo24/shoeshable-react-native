@@ -99,15 +99,14 @@ export default function App() {
     setupDatabase();
   }, []);
 
-  // Set up Firebase Cloud Messaging
   useEffect(() => {
-    console.log('🔔 Setting up Firebase Cloud Messaging...');
+    console.log('Setting up Firebase Cloud Messaging...');
     
     
     // Request permission for notifications
     const requestUserPermission = async () => {
       try {
-        console.log('🔔 Requesting notification permission...');
+        console.log('Requesting notification permission...');
         const authStatus = await messaging().requestPermission();
         const enabled = 
           authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -130,7 +129,7 @@ export default function App() {
     // Custom foreground handler that shows an in-app notification banner
     const registerForegroundHandler = () => {
       messaging().onMessage(async remoteMessage => {
-        console.log('📬 FOREGROUND NOTIFICATION RECEIVED:');
+        console.log('FOREGROUND NOTIFICATION RECEIVED:');
         console.log(JSON.stringify(remoteMessage, null, 2));
         
         if (remoteMessage.notification) {
@@ -150,16 +149,11 @@ export default function App() {
     return Promise.resolve();
   });
 
-      // Update the getInitialNotification handler
   messaging().getInitialNotification().then(remoteMessage => {
     if (remoteMessage) {
-      console.log('🚀 APP OPENED BY NOTIFICATION:');
       console.log(JSON.stringify(remoteMessage, null, 2));
-      
-      // App was opened from a quit state by notification
-      // Handle navigation after app is ready
+
       if (remoteMessage.data) {
-        // We need to wait for navigation to be ready
         setTimeout(() => {
           if (navigationRef.isReady()) {
             if (remoteMessage.data.orderId) {
@@ -178,16 +172,14 @@ export default function App() {
         }, 1000); 
       }
     } else {
-      console.log('📱 App opened normally (not from notification)');
+      console.log('App opened normally (not from notification)');
     }
   });
 
-// Update the onNotificationOpenedApp handler
 messaging().onNotificationOpenedApp(remoteMessage => {
-  console.log('⏰ APP BROUGHT FROM BACKGROUND BY NOTIFICATION:');
+  console.log('APP BROUGHT FROM BACKGROUND BY NOTIFICATION:');
   console.log(JSON.stringify(remoteMessage, null, 2));
-  
-  // Handle navigation for app opened from background
+
   if (remoteMessage.data) {
     if (navigationRef.isReady()) {
       if (remoteMessage.data.orderId) {
@@ -210,7 +202,7 @@ messaging().onNotificationOpenedApp(remoteMessage => {
     requestUserPermission();
 
     return () => {
-      console.log('🧹 Cleaning up FCM listeners');
+      console.log('Cleaning up FCM listeners');
     };
   }, []);
 
@@ -218,7 +210,6 @@ messaging().onNotificationOpenedApp(remoteMessage => {
   const handleNotificationPress = () => {
     if (notification && notification.data) {
       try {
-        // Handle navigation based on the notification data
         if (notification.data.orderId) {
           console.log('Navigating to OrderDetails with orderId:', notification.data.orderId);
           if (navigationRef.isReady()) {
@@ -228,7 +219,6 @@ messaging().onNotificationOpenedApp(remoteMessage => {
             });
           }
         } else if (notification.data.screen === 'PromotionDetails' && notification.data.promotionId) {
-          // Handle promotion notifications specifically
           console.log('Navigating to PromotionDetails with:', {
             promotionId: notification.data.promotionId,
             productId: notification.data.productId
@@ -241,7 +231,6 @@ messaging().onNotificationOpenedApp(remoteMessage => {
             });
           }
         } else if (notification.data.screen) {
-          // Handle other screen notifications generically
           let screenName = notification.data.screen;
           if (screenName === 'OrderDetail') {
             screenName = 'OrderDetails';
@@ -257,7 +246,6 @@ messaging().onNotificationOpenedApp(remoteMessage => {
         Alert.alert('Navigation Error', 'Could not navigate to the requested screen.');
       }
 
-      // Clear notification after handling
       setNotification(null);
     }
   };

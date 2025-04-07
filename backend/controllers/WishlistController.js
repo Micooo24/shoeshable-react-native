@@ -103,7 +103,6 @@ exports.clearWishlist = async (req, res) => {
   }
 };
 
-// Add this new function
 exports.checkWishlist = async (req, res) => {
     const { userId, productId } = req.body;
     try {

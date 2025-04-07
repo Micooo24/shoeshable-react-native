@@ -67,8 +67,8 @@ exports.Register = async function (req, res) {
             zipCode,
             profileImage: uploadedImage, 
             firebaseUid,
-            role: "user", // Set role as user
-            status: "active", // Set default status as active
+            role: "user", 
+            status: "active", 
         });
 
         const savedUser = await newUser.save({ session });
@@ -89,7 +89,6 @@ exports.Register = async function (req, res) {
     }
 };
 
-//Login with email and password comparison to the backend
 exports.Login = async function (req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -147,13 +146,12 @@ exports.Login = async function (req, res) {
 //Google Login with Firebase UID and created credentials through database 
 exports.googleLogin = async function (req, res) {
     try {
-        const { idToken, firebaseUid, fcmToken } = req.body; // Add fcmToken here
-        console.log("Received Firebase UID:", firebaseUid);
+        const { idToken, firebaseUid, fcmToken } = req.body;
+        // console.log("Received Firebase UID:", firebaseUid);
         if (fcmToken) {
-            console.log("Received FCM Token:", fcmToken);
+            // console.log("Received FCM Token:", fcmToken);
         }
 
-        // Verify the ID token using Google Auth Library
         const ticket = await client.verifyIdToken({
             idToken,
             audience: '80143970667-pujqfk20vgm63kg1ealg4ao347i1iked.apps.googleusercontent.com',
@@ -162,12 +160,10 @@ exports.googleLogin = async function (req, res) {
         const payload = ticket.getPayload();
         const { email, name, picture: photoURL } = payload;
 
-        // Check if the user already exists
         let user = await User.findOne({ email });
         if (!user) {
             console.log("User not found, creating a new user");
 
-            // Create a new User instance with default values
             user = new User({
                 username: email.split("@")[0],
                 email,
@@ -181,7 +177,7 @@ exports.googleLogin = async function (req, res) {
                     public_id: "register/users/google-login-profile",
                     url: photoURL || "https://default-profile-image-url.com/default-profile.png",
                 },
-                fcmToken: fcmToken // Store FCM token for new users
+                fcmToken: fcmToken 
             });
 
             await user.save();
@@ -189,26 +185,21 @@ exports.googleLogin = async function (req, res) {
         } else {
             console.log("User found:", user);
 
-            // Ensure default values are set for existing users if fields are missing
             user.phoneNumber = user.phoneNumber || "00000000000";
             user.address = user.address || "Default Address";
             user.zipCode = user.zipCode || "0000";
             
-            // Update FCM token for existing users if provided
             if (fcmToken) {
                 user.fcmToken = fcmToken;
                 console.log("FCM Token updated for existing user:", fcmToken);
             }
 
-            // Save any updates to the user
             await user.save();
         }
 
-        // Generate JWT token
         const token = user.getJwtToken();
         console.log("Generated JWT token:", token);
 
-        // Return the token and user information
         return res.status(200).json({
             token,
             userId: user._id,
@@ -221,7 +212,7 @@ exports.googleLogin = async function (req, res) {
             zipCode: user.zipCode,
             profileImage: user.profileImage,
             firebaseUid: user.firebaseUid,
-            fcmToken: user.fcmToken // Include FCM token in response
+            fcmToken: user.fcmToken 
         });
     } catch (error) {
         console.error("Error during Google login:", error);
@@ -229,8 +220,6 @@ exports.googleLogin = async function (req, res) {
     }
 };
 
-
-//FCM Token Store and Update
 exports.updateFCMToken = async function (req, res) {
     try {
         const { fcmToken } = req.body;
@@ -241,8 +230,7 @@ exports.updateFCMToken = async function (req, res) {
                 message: "FCM token is required" 
             });
         }
-        
-        // Update the FCM token for the authenticated user
+
         const user = await User.findByIdAndUpdate(
             req.user.id, 
             { fcmToken }, 
@@ -272,17 +260,14 @@ exports.updateFCMToken = async function (req, res) {
 //Get User data via middleware
 exports.getUserData= async function (req, res, next) {
     try {
-        // Fetch user by ID
         const user = await User.findById(req.user.id);
 
-        // Check if both user and customer exist
         if (!user ) {
             return res.status(404).json({
                 success: false,
                 message: "User or customer details not found"
             });
         }
-        // Return user and customer details in the response
         return res.status(200).json({
             success: true,
             user: {
@@ -304,12 +289,11 @@ exports.getUserData= async function (req, res, next) {
         res.status(500).json({ message: "Error fetching user profile" });
     }
 }
-//Update User Profile via middleware
+
 exports.updateProfile = async function (req, res, next) {
     try {
         const { firstName, lastName, phoneNumber, address, zipCode } = req.body;
 
-        // Initialize a new user data object
         const newUserData = {
             firstName,
             lastName,
@@ -318,12 +302,10 @@ exports.updateProfile = async function (req, res, next) {
             zipCode,
         };
 
-        // Start transaction session
         const session = await mongoose.startSession();
         session.startTransaction();
 
         try {
-            // Update profile image if provided
             if (req.file) {
                 console.log("Uploaded file buffer:", req.file.buffer); 
                 const result = await new Promise((resolve, reject) => {
