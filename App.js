@@ -21,6 +21,8 @@ import { getToken } from './sqlite_db/Auth';
 
 const navigationRef = createNavigationContainerRef();
 
+// try comment
+
 // Custom In-App Notification
 const NotificationBanner = ({ title, body, onPress, onClose }) => {
   const [animation] = useState(new Animated.Value(-100));
