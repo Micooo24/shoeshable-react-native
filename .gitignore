@@ -40,3 +40,10 @@ android/
 
 #vscode color
 .vscode
+
+# Credentials Hide via gitignore
+google-services.json
+firebase.json
+app.json
+firebase/firebase.js
+
