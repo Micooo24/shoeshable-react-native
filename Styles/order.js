@@ -24,12 +24,12 @@ export const styles = StyleSheet.create({
       shadowRadius: 4,
       elevation: 2,
       alignItems: 'center',
+      marginTop: 20,
     },
     statValue: {
       fontSize: 18,
       fontWeight: 'bold',
       color: COLORS.primary,
-      marginBottom: 4,
     },
     statLabel: {
       fontSize: 12,
@@ -90,6 +90,7 @@ export const styles = StyleSheet.create({
       paddingBottom: 12,
       borderBottomWidth: 1,
       borderBottomColor: '#f0f0f0',
+      marginTop: 8,
     },
     orderIdContainer: {
       flex: 1,

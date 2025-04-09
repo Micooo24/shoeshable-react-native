@@ -295,7 +295,6 @@ const PromotionDetails = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
-  // Your existing styles...
   safeArea: {
     flex: 1,
     backgroundColor: '#f9f9f9',

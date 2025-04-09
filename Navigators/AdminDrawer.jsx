@@ -9,10 +9,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../Theme/color';
 import Dashboard from '../Screens/Admin/Dashboard';
-import Analytics from '../Screens/Admin/Components/Analytics';
 import Product from '../Screens/Admin/Components/Product';
 import User from '../Screens/Admin/Components/User';
-import Settings from '../Screens/Admin/Components/Settings';
 import DrawerContent from '../Navigators/Components/DrawerContent';
 import Order from '../Screens/Admin/Components/Orders';
 import Promotions from '../Screens/Admin/Components/Promotions';
@@ -58,15 +56,6 @@ const AdminNavigator = () => {
         }}
       />
       <Drawer.Screen
-        name="Analytics"
-        component={Analytics}
-        options={{
-          drawerIcon: ({color, size}) => (
-            <Ionicons name="bar-chart-outline" color={color} size={size} />
-          )
-        }}
-      />
-      <Drawer.Screen
         name="ProductManagement"
         component={Product}
         options={{
@@ -82,15 +71,6 @@ const AdminNavigator = () => {
         options={{
           drawerIcon: ({color, size}) => (
             <Ionicons name="people-outline" color={color} size={size} />
-          )
-        }}
-      />
-      <Drawer.Screen
-        name="Settings"
-        component={Settings}
-        options={{
-          drawerIcon: ({color, size}) => (
-            <Ionicons name="settings-outline" color={color} size={size} />
           )
         }}
       />

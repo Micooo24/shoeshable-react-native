@@ -217,37 +217,36 @@ export const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: COLORS.error || 'red',
+    backgroundColor: '#e74c3c', // COLORS.error - hardcoded for clarity
     width: 20,
     height: 20,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
-    borderWidth: 1,
+    zIndex: 100, // Increased to ensure visibility
+    borderWidth: 1.5, // Slightly thicker border
     borderColor: 'white',
     // Add elevation for Android
-    elevation: 2,
+    elevation: 5,
     // Add shadow for iOS
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  
+  countText: {
+    color: 'white', // Explicitly white for better contrast
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 
   zeroCountBadge: {
     backgroundColor: COLORS.gray || '#CCCCCC',
   },
 
-  countText: {
-    color: 'black',
-    fontSize: 11,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  
-  
-  // Orders list
+
   ordersList: {
     marginTop: 4,
   },
@@ -335,61 +334,123 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   modalContent: {
     backgroundColor: COLORS.white,
-    width: '90%',
-    borderRadius: 10,
-    padding: 20,
-    maxHeight: '80%',
+    borderRadius: 15,
+    width: '100%',
+    maxHeight: '90%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  closeButton: {
+    padding: 5,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 20,
     color: COLORS.primary,
-    textAlign: 'center',
   },
-  
-  // Form elements
+  modalScrollView: {
+    padding: 15,
+  },
+  loadingContainer: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: COLORS.primary,
+    fontSize: 16,
+  },
+  profileImageContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  profileImagePreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 10,
+    backgroundColor: '#eee',
+  },
+  imagePickerButton: {
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    marginTop: 5,
+  },
+  imageButtonText: {
+    color: COLORS.white,
+    marginLeft: 5,
+    fontSize: 14,
+  },
   formGroup: {
     marginBottom: 15,
   },
   label: {
     fontSize: 14,
+    color: COLORS.dark,
     marginBottom: 5,
-    color: COLORS.text,
-    fontWeight: '500',
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.grey,
-    borderRadius: 5,
+    borderColor: '#ddd',
+    borderRadius: 8,
     padding: 10,
     fontSize: 16,
+    backgroundColor: '#f9f9f9',
   },
-  
-  // Button styles
+  multilineInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
+    marginBottom: 20,
   },
   button: {
     flex: 1,
     padding: 12,
-    borderRadius: 5,
+    borderRadius: 8,
     alignItems: 'center',
-    marginHorizontal: 5,
+    justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: COLORS.light,
+    backgroundColor: '#f5f5f5',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   saveButton: {
     backgroundColor: COLORS.primary,
+    marginLeft: 10,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+    opacity: 0.7,
   },
   cancelButtonText: {
-    color: COLORS.text,
+    color: COLORS.dark,
     fontWeight: 'bold',
   },
   saveButtonText: {

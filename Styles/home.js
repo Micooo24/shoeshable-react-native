@@ -326,5 +326,328 @@ export const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.light,
     zIndex: 1000,
-  }
+  },
+
+  // New style for filter below banner
+  filterBelowBanner: {
+    flexDirection: 'row',
+    justifyContent: 'left',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    marginTop: 5,
+  },
+  filterButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    zIndex: 2,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 16, // Increased from 12 to 16 for better spacing
+    paddingVertical: 10, // Increased from 8 to 10 for better touch target
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  filterButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterButtonText: {
+    marginLeft: 6, // Increased from 4 to 6 for better spacing
+    color: COLORS.primary,
+    fontWeight: '600',
+    fontSize: 14, // Added font size for consistency
+  },
+  filterButtonTextActive: {
+    color: COLORS.white,
+  },
+  filterCountBadge: {
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+  filterCountText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  
+  // Clear filters button
+  clearFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  clearFiltersText: {
+    marginLeft: 4,
+    color: COLORS.primary,
+    fontWeight: '500',
+    fontSize: 12,
+  },
+  
+  // Filter modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 30,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.dark,
+  },
+  filterScrollView: {
+    marginBottom: 16,
+  },
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: COLORS.dark,
+  },
+  filterOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  filterChip: {
+    backgroundColor: COLORS.backgroundLight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+  },
+  filterChipText: {
+    color: COLORS.dark,
+    fontWeight: '500',
+  },
+  filterChipTextActive: {
+    color: COLORS.white,
+  },
+  
+  // Price range inputs
+  priceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  priceInputWrapper: {
+    flex: 1,
+    backgroundColor: COLORS.backgroundLight,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  priceInputLabel: {
+    fontSize: 12,
+    color: COLORS.darkGray,
+    marginBottom: 4,
+  },
+  priceInput: {
+    color: COLORS.dark,
+    fontSize: 16,
+  },
+  priceInputDivider: {
+    width: 20,
+    height: 1,
+    backgroundColor: COLORS.darkGray,
+    marginHorizontal: 10,
+  },
+  
+  // Sort options
+  sortOptionsContainer: {
+    marginTop: 8,
+  },
+  sortOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.backgroundLight,
+    marginBottom: 8,
+    borderRadius: 8,
+  },
+  sortOptionActive: {
+    backgroundColor: COLORS.primary,
+  },
+  sortOptionText: {
+    color: COLORS.dark,
+    fontWeight: '500',
+  },
+  sortOptionTextActive: {
+    color: COLORS.white,
+  },
+  
+  // Filter action buttons
+  filterActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.backgroundLight,
+  },
+  resetFilterButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.backgroundLight,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  resetFilterText: {
+    color: COLORS.dark,
+    fontWeight: '600',
+  },
+  applyFilterButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    flex: 2,
+    alignItems: 'center',
+  },
+  applyFilterText: {
+    color: COLORS.white,
+    fontWeight: '600',
+  },
+  productCardContainer: {
+    position: 'relative',
+    flex: 1,
+  },
+  quickAddButton: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: COLORS.primary,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+  },
+  quickAddText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  cartModalScroll: {
+    maxHeight: height * 0.5,
+  },
+  cartProductInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.lightGray,
+  },
+  cartProductImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: COLORS.lightGray,
+  },
+  cartProductDetails: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  cartProductName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.darkText,
+    marginBottom: 4,
+  },
+  cartProductPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  cartOptionsSection: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.lightGray,
+  },
+  cartSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.darkText,
+    marginBottom: 12,
+  },
+  cartOptionsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  addToCartButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addToCartText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cancelCartButton: {
+    backgroundColor: COLORS.lightGray,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelCartText: {
+    color: COLORS.darkText,
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });

@@ -8,6 +8,9 @@ require('dotenv').config();
 // App
 const app = express();
 
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
+
 //Routes
 const productRoutes = require('./routes/products');
 const authRoutes = require("./routes/auth");
@@ -16,7 +19,7 @@ const orderRoutes = require('./routes/orders');
 const featuredRoutes = require('./routes/features'); // Import the featured routes
 const reviewRoutes = require('./routes/reviews'); // Import the review route
 const userRoutes = require('./routes/user'); // Import the user route
-// const wishlistRoutes = require('./routes/wishlist'); // Import the wishlist route
+const wishlistRoutes = require('./routes/wishlist'); // Import the wishlist route
 const promotionRoutes = require('./routes/promotions'); // Import the promotion route
 // Mongoose
 mongoose
@@ -53,7 +56,7 @@ app.use("/api/orders", orderRoutes); // Use the order routes
 app.use("/api/features", featuredRoutes); // Use the featured routes
 app.use("/api/reviews", reviewRoutes); // Use the review route
 app.use("/api/users", userRoutes); // Use the user route
-// app.use("/api/wishlist", wishlistRoutes); // Use the wishlist route
+app.use("/api/wishlist", wishlistRoutes); 
 app.use("/api/promotions", promotionRoutes); // Use the promotion route
 
 

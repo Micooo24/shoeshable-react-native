@@ -405,17 +405,12 @@ export const removeMultipleFromCart = (productIds) => {
           message: 'Unauthorized. Please log in to remove items from the cart.',
         };
       }
-
-      // Get userId from token
       const decoded = jwtDecode(authToken);
       const userId = decoded.userId || decoded.id;
       
       console.log(`Removing ${productIds.length} items from local database for user: ${userId}`);
-      
-      // Remove from local database only
       await removeMultipleCartItemsFromDatabase(userId, productIds);
-      
-      // Dispatch the removal action to update Redux store
+    
       dispatch({
         type: REMOVE_MULTIPLE_FROM_CART,
         payload: productIds,

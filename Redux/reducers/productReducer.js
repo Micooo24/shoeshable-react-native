@@ -3,6 +3,7 @@ import {
   UPDATE_PRODUCT, 
   DELETE_PRODUCT, 
   GET_PRODUCTS,
+  SET_PRODUCTS,
   FETCH_ENUM_VALUES_REQUEST,
   FETCH_ENUM_VALUES_SUCCESS,
   FETCH_ENUM_VALUES_FAILURE,
@@ -38,6 +39,12 @@ export const productReducer = (state = initialState, action) => {
         products: action.payload 
       };
       
+    case SET_PRODUCTS:
+        return { 
+          ...state, 
+          products: action.payload 
+        };
+
     case ADD_PRODUCT:
       return { 
         ...state, 

@@ -6,7 +6,7 @@ import { COLORS } from '../Theme/color';
 import { getBrandIcon } from '../Utils/Icons/ProductIcons';
 import { productCardStyles } from './Styles/productCard';
 
-export const ProductCard = ({ item, navigation }) => {
+export const ProductCard = ({ item, navigation, onAddToCart }) => {
   // Simplified function that passes the entire product object
   const handleProductPress = (product) => {
     navigation.navigate('SingleProduct', { product });
@@ -72,7 +72,13 @@ export const ProductCard = ({ item, navigation }) => {
           <Text style={productCardStyles.priceText}>
             ₱{typeof item.price === 'number' ? item.price.toFixed(2) : (item.price || 'N/A')}
           </Text>
-          <TouchableOpacity style={productCardStyles.cartIconButton}>
+          <TouchableOpacity 
+            style={productCardStyles.cartIconButton}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent triggering the parent's onPress
+              onAddToCart && onAddToCart();
+            }}
+          >
             <Icon name="cart-plus" size={18} color={COLORS.white} />
           </TouchableOpacity>
         </View>

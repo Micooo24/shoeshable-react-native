@@ -8,7 +8,7 @@ const {
     updateOrder,
     deleteOrder,
     getUserNotifications,
-    cancelOrderStatus // Import the new cancel function
+    cancelOrderStatus 
 } = require('../controllers/OrderController');
 
 const { isAuthenticatedUser } = require("../middlewares/Auth");
@@ -18,7 +18,7 @@ router.post('/create', isAuthenticatedUser, createOrder);
 router.get('/myorders', isAuthenticatedUser, myOrders);
 router.get('/myorder/:id', isAuthenticatedUser, getSingleOrder);
 router.get('/notifications', isAuthenticatedUser, getUserNotifications);
-router.put('/cancel/:id', isAuthenticatedUser, cancelOrderStatus); // Add new cancel route for users
+router.put('/cancel/:id', isAuthenticatedUser, cancelOrderStatus);
 
 // Admin routes
 router.get('/all', isAuthenticatedUser, getAllOrders);

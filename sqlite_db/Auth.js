@@ -1,11 +1,6 @@
 import { getDatabase } from './Database';
 
-/**
- * Save the token and email into the auth table.
- * This will replace any existing token for the same email.
- * @param {string} token - The authentication token.
- * @param {string} email - The email associated with the token.
- */
+
 export const saveToken = async (token, email) => {
   try {
     const db = await getDatabase();
@@ -44,10 +39,7 @@ export const saveToken = async (token, email) => {
   }
 };
 
-/**
- * Get the token and email for the currently logged-in user.
- * @returns {Promise<{authToken: string, email: string} | null>} - The token and email, or null if no user is logged in.
- */
+
 export const getToken = async () => {
   try {
     const db = await getDatabase();
@@ -80,10 +72,7 @@ export const getToken = async () => {
   }
 };
 
-/**
- * Remove the token and email for the currently logged-in user.
- * @returns {Promise<boolean>} - True if the token was removed successfully, false otherwise.
- */
+
 export const removeToken = async () => {
   try {
     const db = await getDatabase();

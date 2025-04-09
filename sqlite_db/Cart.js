@@ -1,11 +1,6 @@
 import { getDatabase } from './Database';
 
-/**
- * Add a product to the cart or update quantity if already exists
- * @param {string} userId - User ID
- * @param {object} cartItem - Cart item object with product details
- * @returns {Promise<object>} - The added/updated cart item
- */
+
 export const addCartItemToDatabase = async (userId, cartItem) => {
   try {
     const db = await getDatabase();
@@ -100,11 +95,7 @@ export const addCartItemToDatabase = async (userId, cartItem) => {
   }
 };
 
-/**
- * Get all cart items for a user
- * @param {string} userId - User ID
- * @returns {Promise<Array>} - Array of cart items
- */
+
 export const getCartItemsFromDatabase = async (userId) => {
   try {
     if (!userId) {
@@ -141,13 +132,7 @@ export const getCartItemsFromDatabase = async (userId) => {
   }
 };
 
-/**
- * Update cart item fields (size, color, etc)
- * @param {string} userId - User ID
- * @param {string} productId - Product ID
- * @param {object} updates - Fields to update
- * @returns {Promise<object>} - The updated cart item
- */
+
 export const updateCartItemInDatabase = async (userId, productId, updates) => {
   try {
     const db = await getDatabase();
@@ -257,13 +242,7 @@ export const updateCartItemInDatabase = async (userId, productId, updates) => {
   }
 };
 
-/**
- * Update cart item quantity
- * @param {string} userId - User ID
- * @param {string} productId - Product ID
- * @param {number} quantity - New quantity
- * @returns {Promise<object>} - The updated cart item
- */
+
 export const updateCartItemQuantityInDatabase = async (userId, productId, quantity) => {
   try {
     const db = await getDatabase();
@@ -300,12 +279,7 @@ export const updateCartItemQuantityInDatabase = async (userId, productId, quanti
   }
 };
 
-/**
- * Remove an item from the cart
- * @param {string} userId - User ID
- * @param {string} productId - Product ID to remove
- * @returns {Promise<boolean>} - True if successful
- */
+
 export const removeCartItemFromDatabase = async (userId, productId) => {
   try {
     const db = await getDatabase();
@@ -322,11 +296,7 @@ export const removeCartItemFromDatabase = async (userId, productId) => {
   }
 };
 
-/**
- * Clear all items from the cart
- * @param {string} userId - User ID
- * @returns {Promise<boolean>} - True if successful
- */
+
 export const clearCartFromDatabase = async (userId) => {
   try {
     const db = await getDatabase();
@@ -343,13 +313,6 @@ export const clearCartFromDatabase = async (userId) => {
   }
 };
 
-
-/**
- * Remove multiple items from the cart by their product IDs
- * @param {string} userId - User ID
- * @param {array} productIds - Array of product IDs to remove
- * @returns {Promise<boolean>} - True if successful
- */
 export const removeMultipleCartItemsFromDatabase = async (userId, productIds) => {
   try {
     if (!userId || !productIds || productIds.length === 0) {

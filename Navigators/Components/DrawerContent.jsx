@@ -244,68 +244,6 @@ const DrawerContent = (props) => {
         showsVerticalScrollIndicator={false}
       >
         <DrawerItemList {...props} />
-        
-        {/* Divider */}
-        <View style={styles.divider} />
-        
-        {/* Additional Navigation Items */}
-        <View style={styles.extraItemsSection}>
-          <Text style={styles.sectionTitle}>MANAGEMENT</Text>
-          
-          <TouchableOpacity style={styles.drawerItem}>
-            <View style={styles.drawerItemIcon}>
-              <Ionicons name="gift-outline" size={22} color={COLORS.textDark} />
-            </View>
-            <Text style={styles.drawerItemText}>Promotions</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>3</Text>
-            </View>
-          </TouchableOpacity>
-          
-          {/* <TouchableOpacity style={styles.drawerItem}>
-            <View style={styles.drawerItemIcon}>
-              <Ionicons name="cart-outline" size={22} color={COLORS.textDark} />
-            </View>
-            <Text style={styles.drawerItemText}>Orders</Text>
-          </TouchableOpacity> */}
-          
-          <TouchableOpacity style={styles.drawerItem}>
-            <View style={styles.drawerItemIcon}>
-              <Ionicons name="chatbubble-ellipses-outline" size={22} color={COLORS.textDark} />
-            </View>
-            <Text style={styles.drawerItemText}>Messages</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>5</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.divider} />
-        
-        <View style={styles.extraItemsSection}>
-          <Text style={styles.sectionTitle}>OTHER</Text>
-          
-          <TouchableOpacity style={styles.drawerItem}>
-            <View style={styles.drawerItemIcon}>
-              <Ionicons name="help-circle-outline" size={22} color={COLORS.textDark} />
-            </View>
-            <Text style={styles.drawerItemText}>Help & Support</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.drawerItem}>
-            <View style={styles.drawerItemIcon}>
-              <Ionicons name="settings-outline" size={22} color={COLORS.textDark} />
-            </View>
-            <Text style={styles.drawerItemText}>Settings</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.drawerItem}>
-            <View style={styles.drawerItemIcon}>
-              <Ionicons name="document-text-outline" size={22} color={COLORS.textDark} />
-            </View>
-            <Text style={styles.drawerItemText}>Documentation</Text>
-          </TouchableOpacity>
-        </View>
       </DrawerContentScrollView>
       
       {/* Footer */}

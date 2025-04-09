@@ -112,7 +112,6 @@ const NotificationScreen = ({ navigation }) => {
 };
 
 export default NotificationScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -461,95 +461,91 @@ exports.searchProducts = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-
 exports.filterProducts = async (req, res) => {
   try {
+    // Get filter params from query
     const { 
       category, 
+      brand, 
       gender, 
       minPrice, 
       maxPrice, 
       color,
-      sort
+      sort 
     } = req.query;
 
-    // Initialize empty filter criteria
-    const filterCriteria = {};
-    
-    // Apply category filter
+    console.log('Filter params:', { category, brand, gender, minPrice, maxPrice, color, sort });
+
+    // Build filter object
+    const filter = {};
+
     if (category) {
-      if (!Object.values(SHOE_CATEGORIES).includes(category)) {
-        return res.status(400).json({ error: "Invalid category" });
-      }
-      filterCriteria.category = category;
+      filter.category = category.toLowerCase();
     }
-    
-    // Apply gender filter
+
+    if (brand) {
+      filter.brand = brand.toLowerCase();
+    }
+
     if (gender) {
-      if (!GENDER_OPTIONS.includes(gender)) {
-        return res.status(400).json({ error: "Invalid gender" });
-      }
-      filterCriteria.gender = gender;
+      filter.gender = gender.toLowerCase();
     }
-    
-    // Apply color filter
+
     if (color) {
-      if (!COMMON_COLORS.map(c => c.toLowerCase()).includes(color.toLowerCase())) {
-        return res.status(400).json({ error: "Invalid color" });
-      }
-      filterCriteria.color = { $regex: new RegExp(color, 'i') };
+      // For colors, we need to search in the array
+      filter.color = color.toLowerCase();
     }
+
+    // Price range - handle as integers (stored in cents/centavos)
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      
+      if (minPrice) {
+        filter.price.$gte = Number(minPrice);
+      }
+      
+      if (maxPrice) {
+        filter.price.$lte = Number(maxPrice);
+      }
+    }
+
+    console.log('MongoDB filter:', filter);
+
+    // Determine sort options
+    let sortOption = { createdAt: -1 }; // Default: newest first
     
-    // Apply price range filter
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      filterCriteria.price = {};
-      if (minPrice !== undefined) {
-        const min = Number(minPrice);
-        if (isNaN(min)) {
-          return res.status(400).json({ error: "Invalid minimum price" });
-        }
-        filterCriteria.price.$gte = min;
-      }
-      if (maxPrice !== undefined) {
-        const max = Number(maxPrice);
-        if (isNaN(max)) {
-          return res.status(400).json({ error: "Invalid maximum price" });
-        }
-        filterCriteria.price.$lte = max;
-      }
-    }
-    let query = Product.find(filterCriteria);
-  
     if (sort) {
       switch (sort) {
         case 'price_asc':
-          query = query.sort({ price: 1 });
+          sortOption = { price: 1 };
           break;
         case 'price_desc':
-          query = query.sort({ price: -1 });
-          break;
-        case 'newest':
-          query = query.sort({ createdAt: -1 });
+          sortOption = { price: -1 };
           break;
         case 'name_asc':
-          query = query.sort({ name: 1 });
+          sortOption = { name: 1 };
           break;
-        default:
-          query = query.sort({ createdAt: -1 });
+        // Default case is already set
       }
-    } else {
-      query = query.sort({ createdAt: -1 });
     }
-    
-    const products = await query.exec();
-    
+
+    // Execute query
+    const products = await Product.find(filter).sort(sortOption);
+
+    console.log(`Found ${products.length} products matching filters`);
+
+    // Return successful response with products
     res.status(200).json({
-      message: "Filtered products fetched successfully",
+      message: "Products filtered successfully",
       count: products.length,
-      products,
+      products
     });
-  } catch (err) {
-    console.error('Filter error:', err);
-    res.status(500).json({ error: "Server error" });
+  } catch (error) {
+    console.error('Error filtering products:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error filtering products',
+      error: error.message
+    });
   }
 };

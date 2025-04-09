@@ -1,6 +1,6 @@
 const Promotion = require('../models/Promotions');
 const User = require('../models/User');
-const admin = require('../firebase_backend/firebaseAdmin'); // Firebase Admin SDK
+const admin = require('../firebase_backend/firebaseAdmin'); 
 
 // Create a new promotion
 exports.createPromotion = async (req, res) => {
@@ -15,7 +15,6 @@ exports.createPromotion = async (req, res) => {
       });
     }
 
-    // Create the promotion
     const promotion = await Promotion.create({
       product,
       title,
@@ -59,7 +58,6 @@ exports.getAllPromotions = async (req, res) => {
   }
 };
 
-// Get a single promotion by ID
 exports.getPromotionById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -168,7 +166,7 @@ const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
         android: {
           priority: 'high',
           notification: {
-            channelId: 'shoeshable-promotions', // Ensure this matches the channel in your app
+            channelId: 'shoeshable-promotions', 
             priority: 'high',
             visibility: 'public',
             sound: 'default',
@@ -202,8 +200,7 @@ const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
   exports.sendSelectedPromotionNotifications = async (req, res) => {
     try {
       const { promotionIds } = req.body;
-  
-      // Fetch the selected promotions
+
       const promotions = await Promotion.find({ _id: { $in: promotionIds } }).populate('product', 'name');
       if (promotions.length === 0) {
         return res.status(404).json({
@@ -212,7 +209,6 @@ const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
         });
       }
   
-      // Fetch all users with FCM tokens
       const users = await User.find({ fcmToken: { $exists: true, $ne: null } });
       if (users.length === 0) {
         return res.status(404).json({
@@ -229,7 +225,7 @@ const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
         const data = {
           promotionId: promotion._id.toString(),
           productId: promotion.product._id.toString(),
-          screen: 'PromotionDetails', // Navigate to a specific screen in the app
+          screen: 'PromotionDetails',
         };
   
         for (const user of users) {
@@ -276,10 +272,8 @@ exports.getPromotionByIdOrTitle = async (req, res) => {
   
       let promotion;
       if (id) {
-        // Find promotion by ID
         promotion = await Promotion.findById(id).populate('product', 'name price category brand');
       } else if (title) {
-        // Find promotion by title
         promotion = await Promotion.findOne({ title }).populate('product', 'name price category brand');
       }
   

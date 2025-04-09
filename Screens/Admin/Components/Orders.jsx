@@ -26,11 +26,10 @@ const Order = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [totalAmount, setTotalAmount] = useState(0);
   const [orderCount, setOrderCount] = useState(0);
-  const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
-  const [updatingStatus, setUpdatingStatus] = useState(false); // New state for tracking status updates
+  const [updatingStatus, setUpdatingStatus] = useState(false); 
   
   const statusOptions = ['All', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
   
@@ -40,8 +39,7 @@ const Order = () => {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
-
-  // Format currency function (local implementation)
+  
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return '₱0';
     return `₱${amount.toLocaleString()}`;
@@ -509,3 +507,5 @@ const Order = () => {
 };
 
 export default Order;
+
+

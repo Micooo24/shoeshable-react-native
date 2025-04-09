@@ -238,6 +238,7 @@ const OrderDetails = ({ navigation }) => {
         {/* Order Header */}
         <View style={styles.header}>
           <View>
+            <Text style={styles.orderIdLabel}>Date</Text>
             <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
           </View>
           <OrderStatusBadge status={order.orderStatus} />
@@ -397,16 +398,6 @@ const OrderDetails = ({ navigation }) => {
               Are you sure you want to cancel this order? This action cannot be undone.
             </Text>
             
-            <Text style={styles.modalLabel}>Reason for cancellation (optional)</Text>
-            <TextInput
-              style={styles.reasonInput}
-              value={cancelReason}
-              onChangeText={setCancelReason}
-              placeholder="Enter reason for cancellation"
-              multiline={true}
-              maxLength={200}
-            />
-            
             <View style={styles.modalActions}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelModalButton]} 
@@ -435,9 +426,8 @@ const OrderDetails = ({ navigation }) => {
   );
 };
 
-// Add new styles
+
 const styles = StyleSheet.create({
-  // Your existing styles...
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -483,9 +473,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    marginTop: 20,
   },
   orderIdLabel: {
-    fontSize: 12,
+    fontSize: 15,
     color: '#7f8c8d',
   },
   orderId: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -14,8 +14,9 @@ import {
   TextInput,
   ActivityIndicator
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { FontAwesome5, MaterialIcons, AntDesign, Feather } from '@expo/vector-icons';
+import { MaterialIcons, AntDesign, Feather } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../Redux/actions/cartActions';
 import { getToken } from '../../sqlite_db/Auth';
@@ -24,6 +25,7 @@ import { COLORS } from '../../Theme/color';
 import { styles } from '../../Styles/singleProduct'; // Assuming you have a separate file for styles
 import { getAllReviews, createReview, updateReview, deleteReview } from '../../Redux/actions/reviewActions';
 import { getMyOrders } from '../../Redux/actions/orderActions';
+import baseURL from '../../assets/common/baseurl';
 
 const { width, height } = Dimensions.get('window');
 
@@ -49,6 +51,10 @@ const DisplaySingleProduct = ({ route, navigation }) => {
   const [currentReviewId, setCurrentReviewId] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [deletingReview, setDeletingReview] = useState(false);
+  
+  // Add wishlist state
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [loadingWishlist, setLoadingWishlist] = useState(false);
 
 // Replace the useEffect and related functions with this improved version
 useEffect(() => {
@@ -64,6 +70,7 @@ useEffect(() => {
         // Only fetch reviews and check eligibility after we have the user ID
         await fetchProductReviews();
         await checkIfUserCanReview();
+        await checkWishlistStatus(); // Add this line to check wishlist status
       } else {
         console.warn('Could not obtain user ID, proceeding without it');
         // Still fetch reviews even if we don't have a user ID
@@ -77,6 +84,24 @@ useEffect(() => {
   
   initializeData();
 }, []);
+
+// Add useFocusEffect to check wishlist status whenever screen comes into focus
+useFocusEffect(
+  React.useCallback(() => {
+    const checkStatus = async () => {
+      if (currentUserId && product?._id) {
+        console.log('Screen focused, checking wishlist status');
+        await checkWishlistStatus();
+      }
+    };
+    
+    checkStatus();
+    
+    return () => {
+      // Clean up if needed
+    };
+  }, [currentUserId, product?._id])
+);
 
 const getCurrentUserId = async () => {
   try {
@@ -131,6 +156,141 @@ const getCurrentUserId = async () => {
   } catch (error) {
     console.error('Error getting current user:', error);
     return null;
+  }
+};
+
+// Improved wishlist status check
+const checkWishlistStatus = async () => {
+  try {
+    if (!currentUserId || !product?._id) {
+      console.log('Missing user ID or product ID for wishlist check');
+      return;
+    }
+    
+    setLoadingWishlist(true); // Show loading indicator while checking
+    
+    const tokenData = await getToken();
+    if (!tokenData?.authToken) {
+      console.log('No auth token available for wishlist check');
+      setLoadingWishlist(false);
+      return;
+    }
+    
+    console.log('Checking wishlist status for:', {
+      userId: currentUserId,
+      productId: product._id
+    });
+    
+    const response = await fetch(`${baseURL}/api/wishlist/check`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokenData.authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId: currentUserId,
+        productId: product._id
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('Wishlist check failed with status:', response.status);
+      setLoadingWishlist(false);
+      return;
+    }
+    
+    const data = await response.json();
+    console.log('Wishlist check response:', data);
+    
+    // Update the wishlist state
+    setIsInWishlist(data.exists || false);
+    console.log('Product is in wishlist:', data.exists ? 'Yes (❤️)' : 'No (♡)');
+    setLoadingWishlist(false);
+  } catch (error) {
+    console.error('Error checking wishlist status:', error);
+    setLoadingWishlist(false);
+  }
+};
+
+// Improved toggleWishlist function with immediate UI feedback
+const toggleWishlist = async () => {
+  try {
+    const tokenData = await getToken();
+    
+    if (!tokenData?.authToken) {
+      Alert.alert('Unauthorized', 'You must be logged in to manage your wishlist.');
+      return;
+    }
+    
+    if (!currentUserId || !product?._id) {
+      Alert.alert('Error', 'Missing user or product information.');
+      return;
+    }
+    
+    setLoadingWishlist(true);
+    
+    // Immediately update UI for better responsiveness
+    const wasInWishlist = isInWishlist;
+    setIsInWishlist(!wasInWishlist);
+    
+    if (!wasInWishlist) {
+      // Add to wishlist
+      const response = await fetch(`${baseURL}/api/wishlist/add`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${tokenData.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: currentUserId,
+          productId: product._id
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Success - UI already updated
+        Alert.alert('Success', 'Product added to your wishlist.');
+      } else if (response.status === 400 && data.message === 'Product already in wishlist') {
+        // Already in wishlist - UI already correct
+        Alert.alert('Info', 'This product is already in your wishlist.');
+      } else {
+        // Error - revert UI change
+        setIsInWishlist(wasInWishlist);
+        Alert.alert('Error', data.message || 'Failed to add to wishlist.');
+      }
+    } 
+    else {
+      // Remove from wishlist
+      const response = await fetch(`${baseURL}/api/wishlist/remove/${product._id}?userId=${currentUserId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${tokenData.authToken}`
+        }
+      });
+      
+      if (response.ok) {
+        // Success - UI already updated
+        Alert.alert('Success', 'Product removed from your wishlist.');
+      } else {
+        // Error - revert UI change
+        setIsInWishlist(wasInWishlist);
+        let errorMessage = 'Failed to remove from wishlist.';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // If parsing JSON fails, use default error message
+        }
+        Alert.alert('Error', errorMessage);
+      }
+    }
+  } catch (error) {
+    console.error('Error updating wishlist:', error);
+    Alert.alert('Error', 'Network or server error. Please try again.');
+  } finally {
+    setLoadingWishlist(false);
   }
 };
 
@@ -456,6 +616,7 @@ const getCurrentUserId = async () => {
     }
     return null;
   };
+  
   const isCurrentUserReview = (review) => {
     // Add more extensive debugging to identify issues
     console.log('Review ownership check data:', { 
@@ -797,8 +958,20 @@ const getCurrentUserId = async () => {
 
       {/* Bottom Action Bar */}
       <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.wishlistButton}>
-          <Icon name="heart-outline" size={24} color={COLORS.primary} />
+        <TouchableOpacity 
+          style={styles.wishlistButton}
+          onPress={toggleWishlist}
+          disabled={loadingWishlist}
+        >
+          {loadingWishlist ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <Icon 
+              name={isInWishlist ? "heart" : "heart-outline"} 
+              size={24} 
+              color={isInWishlist ? COLORS.error : COLORS.primary} 
+            />
+          )}
         </TouchableOpacity>
 
         <View style={styles.actionButtonsContainer}>
@@ -914,6 +1087,5 @@ const getCurrentUserId = async () => {
     </SafeAreaView>
   );
 };
-
 
 export default DisplaySingleProduct;
